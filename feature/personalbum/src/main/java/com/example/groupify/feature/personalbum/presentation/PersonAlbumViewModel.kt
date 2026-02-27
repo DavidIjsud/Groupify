@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,9 +38,26 @@ class PersonAlbumViewModel @Inject constructor(
         }
     }
 
+    fun onPermissionDenied() {
+        viewModelScope.launch {
+            _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("Permission required"))
+        }
+    }
+
     private fun onStartIndexing() {
         viewModelScope.launch {
-            TODO("Collect indexPhotosUseCase(), update uiState.isIndexing / indexedCount")
+            try {
+                _uiState.update { it.copy(isIndexing = true, indexedCount = 0) }
+                indexPhotosUseCase().collect { progress ->
+                    _uiState.update { it.copy(indexedCount = progress.current) }
+                }
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Indexing failed")
+                )
+            } finally {
+                _uiState.update { it.copy(isIndexing = false) }
+            }
         }
     }
 
