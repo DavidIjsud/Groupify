@@ -2,10 +2,12 @@
 package com.example.groupify.feature.personalbum.di
 
 import com.example.groupify.feature.personalbum.data.ml.MlKitFaceDetector
+import com.example.groupify.feature.personalbum.data.ml.TFLiteFaceNetEmbedder
 import com.example.groupify.feature.personalbum.data.repository.FaceIndexRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PersonRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PhotoRepositoryImpl
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
+import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.example.groupify.feature.personalbum.domain.repository.PersonRepository
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
@@ -34,4 +36,8 @@ abstract class PersonAlbumModule {
     @Binds
     @Singleton
     abstract fun bindFaceDetector(impl: MlKitFaceDetector): FaceDetector
+
+    @Binds
+    @Singleton
+    abstract fun bindFaceEmbedder(impl: TFLiteFaceNetEmbedder): FaceEmbedder
 }

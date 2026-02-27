@@ -64,10 +64,12 @@ fun PersonAlbumScreen(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
-                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: Step 4 */ }
+                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: Step 5 */ }
             }
         }
     }
+
+    val busy = uiState.isIndexing || uiState.isMatching
 
     Column(
         modifier = Modifier
@@ -84,7 +86,7 @@ fun PersonAlbumScreen(
 
         Button(
             onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartIndexing) },
-            enabled = hasPermission && !uiState.isIndexing,
+            enabled = hasPermission && !busy,
         ) {
             Text("Start Indexing")
         }
@@ -93,9 +95,31 @@ fun PersonAlbumScreen(
 
         Button(
             onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.TestFaceDetection) },
-            enabled = hasPermission && !uiState.isIndexing,
+            enabled = hasPermission && !busy,
         ) {
             Text("Test Face Detection")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.UseLatestPhotoAsReference) },
+            enabled = hasPermission && !busy,
+        ) {
+            Text("Use Latest Photo as Reference")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                uiState.referencePhotoUri?.let { uri ->
+                    viewModel.onEvent(PersonAlbumContract.UiEvent.FindMatches(uri))
+                }
+            },
+            enabled = hasPermission && uiState.referencePhotoUri != null && !busy,
+        ) {
+            Text("Find Matches")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -107,9 +131,24 @@ fun PersonAlbumScreen(
             Text("Faces detected: ${uiState.faceCount}")
         }
 
+        uiState.referencePhotoUri?.let { uri ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Reference: …${uri.takeLast(40)}")
+        }
+
+        if (uiState.matchCount > 0) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Matches found: ${uiState.matchCount}")
+        }
+
         if (uiState.isIndexing) {
             Spacer(modifier = Modifier.height(8.dp))
             Text("Indexing...")
+        }
+
+        if (uiState.isMatching) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("Matching...")
         }
 
         errorMessage?.let { msg ->

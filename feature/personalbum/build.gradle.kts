@@ -42,7 +42,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     // ML
     implementation(libs.mlkit.face.detection)
-    // Future: Room, TFLite — add when integrating
+    implementation(libs.tflite.interpreter)
+    // Future: Room, TFLite Task — add when integrating
     // implementation(libs.room.runtime)
     // implementation(libs.room.ktx)
     // ksp(libs.room.compiler)

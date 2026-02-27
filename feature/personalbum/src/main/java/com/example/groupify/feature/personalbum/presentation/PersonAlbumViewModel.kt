@@ -7,6 +7,7 @@ import com.example.groupify.feature.personalbum.domain.model.Person
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
 import com.example.groupify.feature.personalbum.domain.usecase.CreatePersonAlbumUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.DetectFacesInPhotoUseCase
+import com.example.groupify.feature.personalbum.domain.usecase.FindMatchingPhotosUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.IndexPhotosUseCase
 import com.example.groupify.feature.personalbum.presentation.model.PersonUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,7 @@ class PersonAlbumViewModel @Inject constructor(
     private val indexPhotosUseCase: IndexPhotosUseCase,
     private val createPersonAlbumUseCase: CreatePersonAlbumUseCase,
     private val detectFacesInPhotoUseCase: DetectFacesInPhotoUseCase,
+    private val findMatchingPhotosUseCase: FindMatchingPhotosUseCase,
     private val photoRepository: PhotoRepository,
 ) : ViewModel() {
 
@@ -39,6 +41,8 @@ class PersonAlbumViewModel @Inject constructor(
         when (event) {
             is PersonAlbumContract.UiEvent.StartIndexing -> onStartIndexing()
             is PersonAlbumContract.UiEvent.TestFaceDetection -> onTestFaceDetection()
+            is PersonAlbumContract.UiEvent.UseLatestPhotoAsReference -> onUseLatestPhotoAsReference()
+            is PersonAlbumContract.UiEvent.FindMatches -> onFindMatches(event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.CreatePerson -> onCreatePerson(event.name, event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.SelectPerson -> onSelectPerson(event.personId)
         }
@@ -82,6 +86,39 @@ class PersonAlbumViewModel @Inject constructor(
                 _uiEffect.emit(
                     PersonAlbumContract.UiEffect.ShowError(e.message ?: "Face detection failed")
                 )
+            }
+        }
+    }
+
+    private fun onUseLatestPhotoAsReference() {
+        viewModelScope.launch {
+            try {
+                val firstPhoto = photoRepository.getAll().first().firstOrNull()
+                    ?: run {
+                        _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("No photos available."))
+                        return@launch
+                    }
+                _uiState.update { it.copy(referencePhotoUri = firstPhoto.uri) }
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Failed to load photos")
+                )
+            }
+        }
+    }
+
+    private fun onFindMatches(referencePhotoUri: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isMatching = true, matchCount = 0) }
+                val result = findMatchingPhotosUseCase(referencePhotoUri)
+                _uiState.update { it.copy(matchCount = result.matchCount) }
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Matching failed")
+                )
+            } finally {
+                _uiState.update { it.copy(isMatching = false) }
             }
         }
     }
