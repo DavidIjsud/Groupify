@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Groupify"
 include(":app")
+include(":feature:personalbum")
  
