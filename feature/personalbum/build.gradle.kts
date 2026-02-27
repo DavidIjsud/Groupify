@@ -40,10 +40,11 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-    // Future: Room, ML Kit, TFLite — add when integrating
+    // ML
+    implementation(libs.mlkit.face.detection)
+    // Future: Room, TFLite — add when integrating
     // implementation(libs.room.runtime)
     // implementation(libs.room.ktx)
     // ksp(libs.room.compiler)
-    // implementation(libs.mlkit.face.detection)
     // implementation(libs.tflite.task.vision)
 }

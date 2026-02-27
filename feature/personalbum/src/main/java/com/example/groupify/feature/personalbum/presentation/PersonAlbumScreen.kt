@@ -64,7 +64,7 @@ fun PersonAlbumScreen(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
-                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: Step 3 */ }
+                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: Step 4 */ }
             }
         }
     }
@@ -89,9 +89,23 @@ fun PersonAlbumScreen(
             Text("Start Indexing")
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.TestFaceDetection) },
+            enabled = hasPermission && !uiState.isIndexing,
+        ) {
+            Text("Test Face Detection")
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text("Indexed: ${uiState.indexedCount}")
+
+        if (uiState.faceCount > 0) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Faces detected: ${uiState.faceCount}")
+        }
 
         if (uiState.isIndexing) {
             Spacer(modifier = Modifier.height(8.dp))

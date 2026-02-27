@@ -1,9 +1,11 @@
 // feature/personalbum/src/main/.../di/PersonAlbumModule.kt
 package com.example.groupify.feature.personalbum.di
 
+import com.example.groupify.feature.personalbum.data.ml.MlKitFaceDetector
 import com.example.groupify.feature.personalbum.data.repository.FaceIndexRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PersonRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PhotoRepositoryImpl
+import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.example.groupify.feature.personalbum.domain.repository.PersonRepository
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
@@ -28,4 +30,8 @@ abstract class PersonAlbumModule {
     @Binds
     @Singleton
     abstract fun bindPersonRepository(impl: PersonRepositoryImpl): PersonRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindFaceDetector(impl: MlKitFaceDetector): FaceDetector
 }

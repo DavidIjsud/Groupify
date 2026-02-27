@@ -8,12 +8,14 @@ object PersonAlbumContract {
     data class UiState(
         val isIndexing: Boolean = false,
         val indexedCount: Int = 0,
+        val faceCount: Int = 0,
         val persons: List<PersonUiModel> = emptyList(),
         val error: String? = null,
     )
 
     sealed interface UiEvent {
         data object StartIndexing : UiEvent
+        data object TestFaceDetection : UiEvent
         data class CreatePerson(val name: String, val referencePhotoUri: String) : UiEvent
         data class SelectPerson(val personId: String) : UiEvent
     }

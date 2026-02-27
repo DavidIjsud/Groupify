@@ -4,7 +4,9 @@ package com.example.groupify.feature.personalbum.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groupify.feature.personalbum.domain.model.Person
+import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
 import com.example.groupify.feature.personalbum.domain.usecase.CreatePersonAlbumUseCase
+import com.example.groupify.feature.personalbum.domain.usecase.DetectFacesInPhotoUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.IndexPhotosUseCase
 import com.example.groupify.feature.personalbum.presentation.model.PersonUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,6 +25,8 @@ import javax.inject.Inject
 class PersonAlbumViewModel @Inject constructor(
     private val indexPhotosUseCase: IndexPhotosUseCase,
     private val createPersonAlbumUseCase: CreatePersonAlbumUseCase,
+    private val detectFacesInPhotoUseCase: DetectFacesInPhotoUseCase,
+    private val photoRepository: PhotoRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonAlbumContract.UiState())
@@ -33,6 +38,7 @@ class PersonAlbumViewModel @Inject constructor(
     fun onEvent(event: PersonAlbumContract.UiEvent) {
         when (event) {
             is PersonAlbumContract.UiEvent.StartIndexing -> onStartIndexing()
+            is PersonAlbumContract.UiEvent.TestFaceDetection -> onTestFaceDetection()
             is PersonAlbumContract.UiEvent.CreatePerson -> onCreatePerson(event.name, event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.SelectPerson -> onSelectPerson(event.personId)
         }
@@ -57,6 +63,25 @@ class PersonAlbumViewModel @Inject constructor(
                 )
             } finally {
                 _uiState.update { it.copy(isIndexing = false) }
+            }
+        }
+    }
+
+    private fun onTestFaceDetection() {
+        viewModelScope.launch {
+            try {
+                val photos = photoRepository.getAll().first()
+                val firstPhoto = photos.firstOrNull()
+                    ?: run {
+                        _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("No photos available. Run indexing first."))
+                        return@launch
+                    }
+                val faces = detectFacesInPhotoUseCase(firstPhoto.uri)
+                _uiState.update { it.copy(faceCount = faces.size) }
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Face detection failed")
+                )
             }
         }
     }
