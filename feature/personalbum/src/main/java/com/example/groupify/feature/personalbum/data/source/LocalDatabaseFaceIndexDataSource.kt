@@ -1,6 +1,7 @@
 // feature/personalbum/src/main/.../data/source/LocalDatabaseFaceIndexDataSource.kt
 package com.example.groupify.feature.personalbum.data.source
 
+import com.example.groupify.feature.personalbum.data.local.Converters
 import com.example.groupify.feature.personalbum.data.local.dao.FaceEmbeddingDao
 import com.example.groupify.feature.personalbum.data.local.entity.FaceEmbeddingEntity
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
@@ -35,12 +36,12 @@ private fun Face.toEntity(): FaceEmbeddingEntity = FaceEmbeddingEntity(
     top = boundingBox.top,
     right = boundingBox.right,
     bottom = boundingBox.bottom,
-    embedding = embedding.copyOf(),
+    embeddingBlob = Converters.floatArrayToByteArray(embedding),
     createdAt = System.currentTimeMillis(),
 )
 
 private fun FaceEmbeddingEntity.toDomain(): Face = Face(
     photoId = photoId,
     boundingBox = BoundingBox(left = left, top = top, right = right, bottom = bottom),
-    embedding = embedding.copyOf(),
+    embedding = Converters.byteArrayToFloatArray(embeddingBlob),
 )

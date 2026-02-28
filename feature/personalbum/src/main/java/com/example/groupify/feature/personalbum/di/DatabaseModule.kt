@@ -24,7 +24,9 @@ object DatabaseModule {
             context,
             PersonAlbumDatabase::class.java,
             "person_album.db",
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
 
     @Provides
     fun providePhotoDao(db: PersonAlbumDatabase): PhotoDao = db.photoDao()

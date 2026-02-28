@@ -49,8 +49,7 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
                 }
                 photoRepository.markIndexed(photo.id, System.currentTimeMillis())
             } catch (e: Exception) {
-                // Skip this photo; still mark as attempted to avoid re-processing indefinitely
-                photoRepository.markIndexed(photo.id, System.currentTimeMillis())
+                // Photo failed — do NOT mark indexed so it will be retried next run
             }
             emit(IndexingProgress(current = index + 1, total = total))
         }

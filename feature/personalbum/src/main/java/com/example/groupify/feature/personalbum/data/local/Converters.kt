@@ -1,13 +1,11 @@
 // feature/personalbum/src/main/.../data/local/Converters.kt
 package com.example.groupify.feature.personalbum.data.local
 
-import androidx.room.TypeConverter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class Converters {
+object Converters {
 
-    @TypeConverter
     fun floatArrayToByteArray(value: FloatArray): ByteArray {
         val buffer = ByteBuffer.allocate(value.size * 4)
         buffer.order(ByteOrder.nativeOrder())
@@ -15,7 +13,6 @@ class Converters {
         return buffer.array()
     }
 
-    @TypeConverter
     fun byteArrayToFloatArray(value: ByteArray): FloatArray {
         val buffer = ByteBuffer.wrap(value)
         buffer.order(ByteOrder.nativeOrder())
