@@ -10,4 +10,5 @@ interface PhotoRepository {
     suspend fun getUnindexed(limit: Int): List<Photo>
     suspend fun markIndexed(photoId: String, timestamp: Long)
     suspend fun getById(photoId: String): Photo?
+    suspend fun getByIds(ids: List<String>): List<Photo>
 }

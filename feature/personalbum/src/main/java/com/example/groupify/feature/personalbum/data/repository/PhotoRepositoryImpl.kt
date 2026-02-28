@@ -29,6 +29,9 @@ class PhotoRepositoryImpl @Inject constructor(
 
     override suspend fun getById(photoId: String): Photo? =
         photoDao.getPhotoById(photoId)?.toDomain()
+
+    override suspend fun getByIds(ids: List<String>): List<Photo> =
+        photoDao.getByIds(ids).map { it.toDomain() }
 }
 
 private fun Photo.toEntity(): PhotoEntity = PhotoEntity(

@@ -28,9 +28,8 @@ class GetPersonAlbumUseCase @Inject constructor(
             .map { it.photoId }
             .distinct()
 
-        val uris = matchedPhotoIds.mapNotNull { photoId ->
-            photoRepository.getById(photoId)?.uri
-        }
+        val photoMap = photoRepository.getByIds(matchedPhotoIds).associateBy { it.id }
+        val uris = matchedPhotoIds.mapNotNull { photoMap[it]?.uri }
 
         emit(uris)
     }

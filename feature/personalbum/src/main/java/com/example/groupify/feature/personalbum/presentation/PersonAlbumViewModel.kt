@@ -155,9 +155,7 @@ class PersonAlbumViewModel @Inject constructor(
     }
 
     private fun onSelectPerson(personId: String) {
-        viewModelScope.launch {
-            _uiEffect.emit(PersonAlbumContract.UiEffect.NavigateToAlbum(personId))
-        }
+        onLoadAlbum(personId)
     }
 
     private fun onLoadAlbum(personId: String) {
