@@ -9,6 +9,7 @@ import com.example.groupify.feature.personalbum.domain.repository.PhotoRepositor
 import com.example.groupify.feature.personalbum.domain.usecase.CreatePersonAlbumUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.DetectFacesInPhotoUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.FindMatchingPhotosUseCase
+import com.example.groupify.feature.personalbum.domain.usecase.GetPersonAlbumUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import com.example.groupify.feature.personalbum.presentation.model.PersonUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ class PersonAlbumViewModel @Inject constructor(
     private val createPersonAlbumUseCase: CreatePersonAlbumUseCase,
     private val detectFacesInPhotoUseCase: DetectFacesInPhotoUseCase,
     private val findMatchingPhotosUseCase: FindMatchingPhotosUseCase,
+    private val getPersonAlbumUseCase: GetPersonAlbumUseCase,
     private val photoRepository: PhotoRepository,
     private val personRepository: PersonRepository,
 ) : ViewModel() {
@@ -57,6 +59,7 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.FindMatches -> onFindMatches(event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.CreatePerson -> onCreatePerson(event.name, event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.SelectPerson -> onSelectPerson(event.personId)
+            is PersonAlbumContract.UiEvent.LoadAlbum -> onLoadAlbum(event.personId)
         }
     }
 
@@ -154,6 +157,22 @@ class PersonAlbumViewModel @Inject constructor(
     private fun onSelectPerson(personId: String) {
         viewModelScope.launch {
             _uiEffect.emit(PersonAlbumContract.UiEffect.NavigateToAlbum(personId))
+        }
+    }
+
+    private fun onLoadAlbum(personId: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(selectedPersonId = personId, isLoadingAlbum = true, albumUris = emptyList()) }
+                val uris = getPersonAlbumUseCase(personId).first()
+                _uiState.update { it.copy(albumUris = uris) }
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Failed to load album")
+                )
+            } finally {
+                _uiState.update { it.copy(isLoadingAlbum = false) }
+            }
         }
     }
 

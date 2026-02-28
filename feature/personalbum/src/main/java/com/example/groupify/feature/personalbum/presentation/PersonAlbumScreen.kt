@@ -1,4 +1,4 @@
-// feature/personalbum/src/main/.../presentation/PersonAlbumScreen.kt
+// feature/personalbum/src/main/java/com/example/groupify/feature/personalbum/presentation/PersonAlbumScreen.kt
 package com.example.groupify.feature.personalbum.presentation
 
 import android.Manifest
@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,7 +77,7 @@ fun PersonAlbumScreen(
         }
     }
 
-    val busy = uiState.isIndexing || uiState.isMatching || uiState.isCreatingPerson
+    val busy = uiState.isIndexing || uiState.isMatching || uiState.isCreatingPerson || uiState.isLoadingAlbum
 
     Column(
         modifier = Modifier
@@ -191,6 +192,10 @@ fun PersonAlbumScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Creating person…")
             }
+            uiState.isLoadingAlbum -> {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Loading album…")
+            }
         }
 
         errorMessage?.let { msg ->
@@ -205,19 +210,53 @@ fun PersonAlbumScreen(
             Text("People", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
 
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp),
+            ) {
                 items(uiState.persons) { person ->
                     Text(
                         text = person.name,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                viewModel.onEvent(PersonAlbumContract.UiEvent.SelectPerson(person.id))
+                                viewModel.onEvent(PersonAlbumContract.UiEvent.LoadAlbum(person.id))
                             }
                             .padding(vertical = 12.dp),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     HorizontalDivider()
+                }
+            }
+        }
+
+        if (uiState.selectedPersonId != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Matched photos: ${uiState.albumUris.size}",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (uiState.albumUris.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp),
+                ) {
+                    items(uiState.albumUris.take(20)) { uri ->
+                        Text(
+                            text = "…${uri.takeLast(50)}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }

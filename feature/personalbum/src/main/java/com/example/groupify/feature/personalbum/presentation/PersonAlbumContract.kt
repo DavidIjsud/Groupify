@@ -14,6 +14,9 @@ object PersonAlbumContract {
         val matchCount: Int = 0,
         val referencePhotoUri: String? = null,
         val persons: List<PersonUiModel> = emptyList(),
+        val selectedPersonId: String? = null,
+        val isLoadingAlbum: Boolean = false,
+        val albumUris: List<String> = emptyList(),
         val error: String? = null,
     )
 
@@ -24,6 +27,7 @@ object PersonAlbumContract {
         data class FindMatches(val referencePhotoUri: String) : UiEvent
         data class CreatePerson(val name: String, val referencePhotoUri: String) : UiEvent
         data class SelectPerson(val personId: String) : UiEvent
+        data class LoadAlbum(val personId: String) : UiEvent
     }
 
     sealed interface UiEffect {
