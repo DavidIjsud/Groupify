@@ -6,14 +6,20 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,25 +64,26 @@ fun PersonAlbumScreen(
         }
     }
 
+    var personName by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
-                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: Step 5 */ }
+                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: NavGraph wiring */ }
             }
         }
     }
 
-    val busy = uiState.isIndexing || uiState.isMatching
+    val busy = uiState.isIndexing || uiState.isMatching || uiState.isCreatingPerson
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
     ) {
         Button(onClick = { permissionLauncher.launch(permission) }) {
             Text("Request Permission")
@@ -124,6 +131,36 @@ fun PersonAlbumScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        HorizontalDivider()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = personName,
+            onValueChange = { personName = it },
+            label = { Text("Person name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                uiState.referencePhotoUri?.let { uri ->
+                    viewModel.onEvent(PersonAlbumContract.UiEvent.CreatePerson(personName.trim(), uri))
+                }
+            },
+            enabled = hasPermission &&
+                personName.isNotBlank() &&
+                uiState.referencePhotoUri != null &&
+                !busy,
+        ) {
+            Text(if (uiState.isCreatingPerson) "Creating…" else "Create Person")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text("Indexed: ${uiState.indexedCount}")
 
         if (uiState.faceCount > 0) {
@@ -141,19 +178,48 @@ fun PersonAlbumScreen(
             Text("Matches found: ${uiState.matchCount}")
         }
 
-        if (uiState.isIndexing) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Indexing...")
-        }
-
-        if (uiState.isMatching) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Matching...")
+        when {
+            uiState.isIndexing -> {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Indexing…")
+            }
+            uiState.isMatching -> {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Matching…")
+            }
+            uiState.isCreatingPerson -> {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Creating person…")
+            }
         }
 
         errorMessage?.let { msg ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = msg, color = MaterialTheme.colorScheme.error)
+        }
+
+        if (uiState.persons.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("People", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(uiState.persons) { person ->
+                    Text(
+                        text = person.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.onEvent(PersonAlbumContract.UiEvent.SelectPerson(person.id))
+                            }
+                            .padding(vertical = 12.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    HorizontalDivider()
+                }
+            }
         }
     }
 }

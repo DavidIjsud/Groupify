@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.groupify.feature.personalbum.data.local.PersonAlbumDatabase
 import com.example.groupify.feature.personalbum.data.local.dao.FaceEmbeddingDao
+import com.example.groupify.feature.personalbum.data.local.dao.PersonDao
 import com.example.groupify.feature.personalbum.data.local.dao.PhotoDao
 import dagger.Module
 import dagger.Provides
@@ -33,4 +34,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFaceEmbeddingDao(db: PersonAlbumDatabase): FaceEmbeddingDao = db.faceEmbeddingDao()
+
+    @Provides
+    fun providePersonDao(db: PersonAlbumDatabase): PersonDao = db.personDao()
 }

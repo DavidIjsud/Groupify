@@ -4,6 +4,7 @@ package com.example.groupify.feature.personalbum.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groupify.feature.personalbum.domain.model.Person
+import com.example.groupify.feature.personalbum.domain.repository.PersonRepository
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
 import com.example.groupify.feature.personalbum.domain.usecase.CreatePersonAlbumUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.DetectFacesInPhotoUseCase
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +32,7 @@ class PersonAlbumViewModel @Inject constructor(
     private val detectFacesInPhotoUseCase: DetectFacesInPhotoUseCase,
     private val findMatchingPhotosUseCase: FindMatchingPhotosUseCase,
     private val photoRepository: PhotoRepository,
+    private val personRepository: PersonRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonAlbumContract.UiState())
@@ -36,6 +40,14 @@ class PersonAlbumViewModel @Inject constructor(
 
     private val _uiEffect = MutableSharedFlow<PersonAlbumContract.UiEffect>()
     val uiEffect: SharedFlow<PersonAlbumContract.UiEffect> = _uiEffect.asSharedFlow()
+
+    init {
+        personRepository.getAll()
+            .onEach { persons ->
+                _uiState.update { it.copy(persons = persons.map { p -> p.toUiModel() }) }
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun onEvent(event: PersonAlbumContract.UiEvent) {
         when (event) {
@@ -125,7 +137,17 @@ class PersonAlbumViewModel @Inject constructor(
 
     private fun onCreatePerson(name: String, referencePhotoUri: String) {
         viewModelScope.launch {
-            TODO("Resolve referencePhotoUri to embedding, call createPersonAlbumUseCase, emit NavigateToAlbum effect")
+            try {
+                _uiState.update { it.copy(isCreatingPerson = true) }
+                val person = createPersonAlbumUseCase(name, referencePhotoUri)
+                _uiEffect.emit(PersonAlbumContract.UiEffect.NavigateToAlbum(person.id))
+            } catch (e: Exception) {
+                _uiEffect.emit(
+                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Failed to create person")
+                )
+            } finally {
+                _uiState.update { it.copy(isCreatingPerson = false) }
+            }
         }
     }
 

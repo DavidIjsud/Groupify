@@ -9,6 +9,7 @@ object PersonAlbumContract {
         val isIndexing: Boolean = false,
         val indexedCount: Int = 0,
         val faceCount: Int = 0,
+        val isCreatingPerson: Boolean = false,
         val isMatching: Boolean = false,
         val matchCount: Int = 0,
         val referencePhotoUri: String? = null,
