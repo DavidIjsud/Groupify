@@ -2,7 +2,10 @@
 package com.example.groupify.feature.personalbum.presentation
 
 import android.Manifest
+import android.content.ClipData
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +76,26 @@ fun PersonAlbumScreen(
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
                 is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: NavGraph wiring */ }
+                is PersonAlbumContract.UiEffect.ShareUris -> {
+                    val parsedUris = effect.uris.map { Uri.parse(it) }
+                    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+                        type = "image/*"
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(parsedUris))
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            clipData = ClipData.newUri(
+                                context.contentResolver,
+                                "Image",
+                                parsedUris.first(),
+                            ).also { clip ->
+                                parsedUris.drop(1).forEach { uri ->
+                                    clip.addItem(ClipData.Item(uri))
+                                }
+                            }
+                        }
+                    }
+                    context.startActivity(Intent.createChooser(intent, "Share via"))
+                }
             }
         }
     }
@@ -239,9 +262,18 @@ fun PersonAlbumScreen(
                 text = "Matched photos: ${uiState.albumUris.size}",
                 style = MaterialTheme.typography.titleMedium,
             )
+
             Spacer(modifier = Modifier.height(8.dp))
 
+            Button(
+                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareAlbum) },
+                enabled = uiState.albumUris.isNotEmpty() && !uiState.isLoadingAlbum,
+            ) {
+                Text("Share Album")
+            }
+
             if (uiState.albumUris.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()

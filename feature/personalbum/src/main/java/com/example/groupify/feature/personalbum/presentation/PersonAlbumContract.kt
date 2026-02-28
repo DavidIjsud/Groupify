@@ -28,10 +28,12 @@ object PersonAlbumContract {
         data class CreatePerson(val name: String, val referencePhotoUri: String) : UiEvent
         data class SelectPerson(val personId: String) : UiEvent
         data class LoadAlbum(val personId: String) : UiEvent
+        data object ShareAlbum : UiEvent
     }
 
     sealed interface UiEffect {
         data class NavigateToAlbum(val personId: String) : UiEffect
         data class ShowError(val message: String) : UiEffect
+        data class ShareUris(val uris: List<String>) : UiEffect
     }
 }

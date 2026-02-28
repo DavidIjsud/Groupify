@@ -60,6 +60,7 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.CreatePerson -> onCreatePerson(event.name, event.referencePhotoUri)
             is PersonAlbumContract.UiEvent.SelectPerson -> onSelectPerson(event.personId)
             is PersonAlbumContract.UiEvent.LoadAlbum -> onLoadAlbum(event.personId)
+            is PersonAlbumContract.UiEvent.ShareAlbum -> onShareAlbum()
         }
     }
 
@@ -170,6 +171,17 @@ class PersonAlbumViewModel @Inject constructor(
                 )
             } finally {
                 _uiState.update { it.copy(isLoadingAlbum = false) }
+            }
+        }
+    }
+
+    private fun onShareAlbum() {
+        viewModelScope.launch {
+            val uris = _uiState.value.albumUris
+            if (uris.isEmpty()) {
+                _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("No photos to share"))
+            } else {
+                _uiEffect.emit(PersonAlbumContract.UiEffect.ShareUris(uris))
             }
         }
     }
