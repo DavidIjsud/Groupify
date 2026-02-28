@@ -43,13 +43,8 @@ class TFLiteFaceNetEmbedder @Inject constructor(
     }
 
     override suspend fun embedFace(photoUri: String, faceBoundingBox: BoundingBox): FloatArray {
-        val sourceBitmap = withContext(Dispatchers.IO) {
-            val options = BitmapFactory.Options().apply {
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            context.contentResolver.openInputStream(Uri.parse(photoUri))?.use { stream ->
-                BitmapFactory.decodeStream(stream, null, options)
-            } ?: throw IllegalStateException("Cannot decode bitmap from $photoUri")
+        val (sourceBitmap, sampleSize) = withContext(Dispatchers.IO) {
+            decodeSampledBitmap(photoUri)
         }
 
         return withContext(Dispatchers.Default) {
@@ -59,12 +54,23 @@ class TFLiteFaceNetEmbedder @Inject constructor(
                 sourceBitmap
             }
             try {
-                val left = faceBoundingBox.left.toInt().coerceIn(0, softBitmap.width - 1)
-                val top = faceBoundingBox.top.toInt().coerceIn(0, softBitmap.height - 1)
-                val right = faceBoundingBox.right.toInt().coerceIn(left + 1, softBitmap.width)
-                val bottom = faceBoundingBox.bottom.toInt().coerceIn(top + 1, softBitmap.height)
+                // Scale bounding box coordinates to match the downsampled bitmap
+                val scaledLeft = (faceBoundingBox.left / sampleSize).toInt()
+                    .coerceIn(0, softBitmap.width - 1)
+                val scaledTop = (faceBoundingBox.top / sampleSize).toInt()
+                    .coerceIn(0, softBitmap.height - 1)
+                val scaledRight = (faceBoundingBox.right / sampleSize).toInt()
+                    .coerceIn(scaledLeft + 1, softBitmap.width)
+                val scaledBottom = (faceBoundingBox.bottom / sampleSize).toInt()
+                    .coerceIn(scaledTop + 1, softBitmap.height)
 
-                val cropped = Bitmap.createBitmap(softBitmap, left, top, right - left, bottom - top)
+                val cropped = Bitmap.createBitmap(
+                    softBitmap,
+                    scaledLeft,
+                    scaledTop,
+                    scaledRight - scaledLeft,
+                    scaledBottom - scaledTop,
+                )
                 val resized = Bitmap.createScaledBitmap(cropped, INPUT_SIZE, INPUT_SIZE, true)
                 cropped.recycle()
 
@@ -73,7 +79,13 @@ class TFLiteFaceNetEmbedder @Inject constructor(
 
                 inferenceMutex.withLock {
                     val outputShape = interpreter.getOutputTensor(0).shape()
-                    val outputSize = outputShape[1]
+                    val outputSize = when {
+                        outputShape.size == 2 && outputShape[0] == 1 -> outputShape[1]
+                        outputShape.size == 1 -> outputShape[0]
+                        else -> throw IllegalStateException(
+                            "Unexpected output tensor shape: ${outputShape.toList()}"
+                        )
+                    }
                     val outputBuffer = Array(1) { FloatArray(outputSize) }
                     interpreter.run(inputBuffer, outputBuffer)
                     outputBuffer[0]
@@ -82,6 +94,44 @@ class TFLiteFaceNetEmbedder @Inject constructor(
                 softBitmap.recycle()
             }
         }
+    }
+
+    /**
+     * Two-pass decode: first pass reads dimensions only, second pass decodes
+     * at the computed [inSampleSize] so the max dimension stays within [MAX_DECODE_DIMENSION].
+     * Returns the bitmap and the actual sample size used (needed to scale bounding boxes).
+     */
+    private fun decodeSampledBitmap(photoUri: String): Pair<Bitmap, Int> {
+        val uri = Uri.parse(photoUri)
+
+        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, boundsOptions)
+        }
+
+        val sampleSize = calculateInSampleSize(
+            boundsOptions.outWidth,
+            boundsOptions.outHeight,
+            MAX_DECODE_DIMENSION,
+        )
+
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, decodeOptions)
+        } ?: throw IllegalStateException("Cannot decode bitmap from $photoUri")
+
+        return bitmap to sampleSize
+    }
+
+    private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
+        var sampleSize = 1
+        while (maxOf(width / sampleSize, height / sampleSize) > maxDimension) {
+            sampleSize *= 2
+        }
+        return sampleSize
     }
 
     private fun bitmapToInputBuffer(bitmap: Bitmap): ByteBuffer {
@@ -105,5 +155,6 @@ class TFLiteFaceNetEmbedder @Inject constructor(
         private const val FLOAT_BYTES = 4
         private const val MEAN = 127.5f
         private const val STD = 127.5f
+        private const val MAX_DECODE_DIMENSION = 1024
     }
 }

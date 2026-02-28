@@ -36,15 +36,19 @@ class FindMatchingPhotosUseCase @Inject constructor(
 
         val matchedUris = mutableListOf<String>()
         for (photo in photos) {
-            val faces = faceDetector.detectFaces(photo.uri)
-            var matched = false
-            for (face in faces) {
-                if (matched) break
-                val embedding = faceEmbedder.embedFace(photo.uri, face.boundingBox)
-                if (cosineSimilarity(referenceEmbedding, embedding) >= threshold) {
-                    matchedUris.add(photo.uri)
-                    matched = true
+            try {
+                val faces = faceDetector.detectFaces(photo.uri)
+                var matched = false
+                for (face in faces) {
+                    if (matched) break
+                    val embedding = faceEmbedder.embedFace(photo.uri, face.boundingBox)
+                    if (cosineSimilarity(referenceEmbedding, embedding) >= threshold) {
+                        matchedUris.add(photo.uri)
+                        matched = true
+                    }
                 }
+            } catch (e: Exception) {
+                // Skip photos that fail to decode or detect; continue with the rest
             }
         }
 
