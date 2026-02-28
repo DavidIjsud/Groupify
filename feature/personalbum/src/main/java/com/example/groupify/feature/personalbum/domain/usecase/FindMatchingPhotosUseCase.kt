@@ -3,6 +3,7 @@ package com.example.groupify.feature.personalbum.domain.usecase
 
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder
+import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
 import com.example.groupify.feature.personalbum.domain.util.cosineSimilarity
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ data class MatchResult(val matchCount: Int, val matchedUris: List<String>)
 
 class FindMatchingPhotosUseCase @Inject constructor(
     private val photoRepository: PhotoRepository,
+    private val faceIndexRepository: FaceIndexRepository,
     private val faceDetector: FaceDetector,
     private val faceEmbedder: FaceEmbedder,
 ) {
@@ -22,6 +24,7 @@ class FindMatchingPhotosUseCase @Inject constructor(
         limit: Int = 200,
         threshold: Float = 0.75f,
     ): MatchResult = withContext(Dispatchers.Default) {
+        // 1. Detect + embed reference face
         val referenceFaces = faceDetector.detectFaces(referencePhotoUri)
         if (referenceFaces.isEmpty()) return@withContext MatchResult(0, emptyList())
 
@@ -32,25 +35,21 @@ class FindMatchingPhotosUseCase @Inject constructor(
 
         val referenceEmbedding = faceEmbedder.embedFace(referencePhotoUri, referenceFace.boundingBox)
 
-        val photos = photoRepository.getAll().first().take(limit)
+        // 2. Load all stored embeddings from DB
+        val allStoredFaces = faceIndexRepository.getAllFaces().first()
 
-        val matchedUris = mutableListOf<String>()
-        for (photo in photos) {
-            try {
-                val faces = faceDetector.detectFaces(photo.uri)
-                var matched = false
-                for (face in faces) {
-                    if (matched) break
-                    val embedding = faceEmbedder.embedFace(photo.uri, face.boundingBox)
-                    if (cosineSimilarity(referenceEmbedding, embedding) >= threshold) {
-                        matchedUris.add(photo.uri)
-                        matched = true
-                    }
-                }
-            } catch (e: Exception) {
-                // Skip photos that fail to decode or detect; continue with the rest
+        // 3. Find matching photo IDs via cosine similarity
+        val matchedPhotoIds = mutableSetOf<String>()
+        for (storedFace in allStoredFaces) {
+            if (cosineSimilarity(referenceEmbedding, storedFace.embedding) >= threshold) {
+                matchedPhotoIds.add(storedFace.photoId)
             }
         }
+
+        // 4. Resolve photo IDs to URIs
+        val matchedUris = matchedPhotoIds
+            .take(limit)
+            .mapNotNull { photoId -> photoRepository.getById(photoId)?.uri }
 
         MatchResult(matchCount = matchedUris.size, matchedUris = matchedUris)
     }

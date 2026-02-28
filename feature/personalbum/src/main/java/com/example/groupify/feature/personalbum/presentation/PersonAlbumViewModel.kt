@@ -8,7 +8,7 @@ import com.example.groupify.feature.personalbum.domain.repository.PhotoRepositor
 import com.example.groupify.feature.personalbum.domain.usecase.CreatePersonAlbumUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.DetectFacesInPhotoUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.FindMatchingPhotosUseCase
-import com.example.groupify.feature.personalbum.domain.usecase.IndexPhotosUseCase
+import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import com.example.groupify.feature.personalbum.presentation.model.PersonUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,7 +24,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class PersonAlbumViewModel @Inject constructor(
-    private val indexPhotosUseCase: IndexPhotosUseCase,
+    private val indexFacesAndEmbeddingsUseCase: IndexFacesAndEmbeddingsUseCase,
     private val createPersonAlbumUseCase: CreatePersonAlbumUseCase,
     private val detectFacesInPhotoUseCase: DetectFacesInPhotoUseCase,
     private val findMatchingPhotosUseCase: FindMatchingPhotosUseCase,
@@ -58,7 +58,7 @@ class PersonAlbumViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isIndexing = true, indexedCount = 0) }
-                indexPhotosUseCase().collect { progress ->
+                indexFacesAndEmbeddingsUseCase().collect { progress ->
                     _uiState.update { it.copy(indexedCount = progress.current) }
                 }
             } catch (e: Exception) {

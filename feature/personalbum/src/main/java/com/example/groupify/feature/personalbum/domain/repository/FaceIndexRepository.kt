@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface FaceIndexRepository {
     suspend fun save(face: Face)
+    suspend fun saveAll(faces: List<Face>)
     fun getFacesForPhoto(photoId: String): Flow<List<Face>>
     fun getAllFaces(): Flow<List<Face>>
 }

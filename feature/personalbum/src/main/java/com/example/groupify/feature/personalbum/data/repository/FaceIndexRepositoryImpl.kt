@@ -11,6 +11,7 @@ class FaceIndexRepositoryImpl @Inject constructor(
     private val dataSource: LocalDatabaseFaceIndexDataSource,
 ) : FaceIndexRepository {
     override suspend fun save(face: Face) = dataSource.insert(face)
+    override suspend fun saveAll(faces: List<Face>) = dataSource.insertAll(faces)
     override fun getFacesForPhoto(photoId: String): Flow<List<Face>> = dataSource.queryByPhotoId(photoId)
     override fun getAllFaces(): Flow<List<Face>> = dataSource.queryAll()
 }

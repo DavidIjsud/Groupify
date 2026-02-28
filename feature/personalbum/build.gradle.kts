@@ -43,9 +43,10 @@ dependencies {
     // ML
     implementation(libs.mlkit.face.detection)
     implementation(libs.tflite.interpreter)
-    // Future: Room, TFLite Task — add when integrating
-    // implementation(libs.room.runtime)
-    // implementation(libs.room.ktx)
-    // ksp(libs.room.compiler)
+    // Room
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+    // Future: TFLite Task — add when integrating
     // implementation(libs.tflite.task.vision)
 }
