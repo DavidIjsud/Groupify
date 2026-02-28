@@ -1,0 +1,26 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:2:1-9:12
+INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:2:1-9:12
+	package
+		INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.READ_MEDIA_IMAGES
+ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:4:5-76
+	android:name
+		ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:4:22-73
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:5:5-7:38
+	android:maxSdkVersion
+		ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:7:9-35
+	android:name
+		ADDED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:6:9-64
+uses-sdk
+INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml
+INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml

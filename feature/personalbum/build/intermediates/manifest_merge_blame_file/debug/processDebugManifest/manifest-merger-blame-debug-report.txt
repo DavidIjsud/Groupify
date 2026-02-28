@@ -1,0 +1,17 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.example.groupify.feature.personalbum" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+7-->/Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:4:5-76
+7-->/Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:4:22-73
+8    <uses-permission
+8-->/Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:5:5-7:38
+9        android:name="android.permission.READ_EXTERNAL_STORAGE"
+9-->/Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:6:9-64
+10        android:maxSdkVersion="32" />
+10-->/Users/davidgarcia/Documents/documents/Android Native Practices/Groupify/feature/personalbum/src/main/AndroidManifest.xml:7:9-35
+11
+12</manifest>
