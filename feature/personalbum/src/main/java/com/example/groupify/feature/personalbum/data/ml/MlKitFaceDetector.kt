@@ -4,7 +4,9 @@ package com.example.groupify.feature.personalbum.data.ml
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
 import com.example.groupify.feature.personalbum.domain.model.DetectedFace
@@ -35,17 +37,40 @@ class MlKitFaceDetector @Inject constructor(
     override suspend fun detectFaces(photoUri: String): List<DetectedFace> {
         val image = withContext(Dispatchers.IO) {
             val uri = Uri.parse(photoUri)
-            val bitmap = context.contentResolver.openInputStream(uri).use { stream ->
+
+            val decoded = context.contentResolver.openInputStream(uri).use { stream ->
                 checkNotNull(stream) { "Cannot open stream for $photoUri" }
                 BitmapFactory.decodeStream(stream)
             }
-            val argbBitmap = if (bitmap.config == Bitmap.Config.ARGB_8888) {
-                bitmap
-            } else {
-                bitmap.copy(Bitmap.Config.ARGB_8888, false).also { bitmap.recycle() }
+
+            val rotationDegrees = context.contentResolver.openInputStream(uri).use { stream ->
+                checkNotNull(stream) { "Cannot open stream for EXIF at $photoUri" }
+                val exif = ExifInterface(stream)
+                when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 0f
+                }
             }
-            InputImage.fromBitmap(argbBitmap, 0)
+
+            val rotated = if (rotationDegrees != 0f) {
+                val matrix = Matrix().apply { postRotate(rotationDegrees) }
+                Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
+                    .also { if (it !== decoded) decoded.recycle() }
+            } else {
+                decoded
+            }
+
+            val argb = if (rotated.config == Bitmap.Config.ARGB_8888) {
+                rotated
+            } else {
+                rotated.copy(Bitmap.Config.ARGB_8888, false).also { rotated.recycle() }
+            }
+
+            InputImage.fromBitmap(argb, 0)
         }
+
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { /* ML Kit task cannot be cancelled; isActive guards below prevent resume */ }
 

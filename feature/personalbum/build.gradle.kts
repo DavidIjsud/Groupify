@@ -43,6 +43,7 @@ dependencies {
     // ML
     implementation(libs.mlkit.face.detection)
     implementation(libs.tflite.interpreter)
+    implementation(libs.androidx.exifinterface)
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

@@ -14,6 +14,7 @@ hiltNavigationCompose = "1.2.0"
 room = "2.7.1"
 mlkitFaceDetection = "16.1.7"
 tflite = "2.14.0"
+exifinterface = "1.3.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -45,6 +46,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkitFaceDetection" }
 tflite-interpreter = { group = "org.tensorflow", name = "tensorflow-lite", version.ref = "tflite" }
 tflite-task-vision = { group = "org.tensorflow", name = "tensorflow-lite-task-vision", version.ref = "tflite" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
