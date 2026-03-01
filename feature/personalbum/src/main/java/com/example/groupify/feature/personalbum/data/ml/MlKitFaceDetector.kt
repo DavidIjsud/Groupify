@@ -1,7 +1,9 @@
-// feature/personalbum/src/main/.../data/ml/MlKitFaceDetector.kt
+// feature/personalbum/src/main/java/com/example/groupify/feature/personalbum/data/ml/MlKitFaceDetector.kt
 package com.example.groupify.feature.personalbum.data.ml
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
@@ -32,7 +34,17 @@ class MlKitFaceDetector @Inject constructor(
 
     override suspend fun detectFaces(photoUri: String): List<DetectedFace> {
         val image = withContext(Dispatchers.IO) {
-            InputImage.fromFilePath(context, Uri.parse(photoUri))
+            val uri = Uri.parse(photoUri)
+            val bitmap = context.contentResolver.openInputStream(uri).use { stream ->
+                checkNotNull(stream) { "Cannot open stream for $photoUri" }
+                BitmapFactory.decodeStream(stream)
+            }
+            val argbBitmap = if (bitmap.config == Bitmap.Config.ARGB_8888) {
+                bitmap
+            } else {
+                bitmap.copy(Bitmap.Config.ARGB_8888, false).also { bitmap.recycle() }
+            }
+            InputImage.fromBitmap(argbBitmap, 0)
         }
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { /* ML Kit task cannot be cancelled; isActive guards below prevent resume */ }

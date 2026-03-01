@@ -27,6 +27,7 @@ class SearchByPhotoUseCase @Inject constructor(
         val queryEmbedding = faceEmbedder.embedFace(queryPhotoUri, largestFace.boundingBox)
 
         val storedFaces = faceIndexRepository.getAllFaces().first()
+        if (storedFaces.isEmpty()) throw IllegalStateException("No indexed faces yet. Tap Start Indexing first.")
         val matchedPhotoIds = storedFaces
             .filter { face -> cosineSimilarity(queryEmbedding, face.embedding) >= threshold }
             .map { it.photoId }

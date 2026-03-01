@@ -80,21 +80,18 @@ fun PersonAlbumScreen(
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
                 is PersonAlbumContract.UiEffect.ShareUris -> {
                     val parsedUris = effect.uris.map { Uri.parse(it) }
+                    val clip = ClipData.newUri(
+                        context.contentResolver,
+                        "Image",
+                        parsedUris.first(),
+                    ).also { c ->
+                        parsedUris.drop(1).forEach { uri -> c.addItem(ClipData.Item(uri)) }
+                    }
                     val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
                         type = "image/*"
                         putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(parsedUris))
+                        clipData = clip
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            clipData = ClipData.newUri(
-                                context.contentResolver,
-                                "Image",
-                                parsedUris.first(),
-                            ).also { clip ->
-                                parsedUris.drop(1).forEach { uri ->
-                                    clip.addItem(ClipData.Item(uri))
-                                }
-                            }
-                        }
                     }
                     context.startActivity(Intent.createChooser(intent, "Share via"))
                 }
