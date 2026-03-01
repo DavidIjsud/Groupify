@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -23,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,14 +66,18 @@ fun PersonAlbumScreen(
         }
     }
 
-    var personName by remember { mutableStateOf("") }
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        uri?.let { viewModel.onEvent(PersonAlbumContract.UiEvent.PickQueryPhoto(it.toString())) }
+    }
+
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShowError -> errorMessage = effect.message
-                is PersonAlbumContract.UiEffect.NavigateToAlbum -> { /* TODO: NavGraph wiring */ }
                 is PersonAlbumContract.UiEffect.ShareUris -> {
                     val parsedUris = effect.uris.map { Uri.parse(it) }
                     val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
@@ -100,7 +102,7 @@ fun PersonAlbumScreen(
         }
     }
 
-    val busy = uiState.isIndexing || uiState.isMatching || uiState.isCreatingPerson || uiState.isLoadingAlbum
+    val busy = uiState.isIndexing || uiState.isSearching
 
     Column(
         modifier = Modifier
@@ -119,178 +121,74 @@ fun PersonAlbumScreen(
             onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartIndexing) },
             enabled = hasPermission && !busy,
         ) {
-            Text("Start Indexing")
+            Text(if (uiState.isIndexing) "Indexing… (${uiState.indexedCount})" else "Start Indexing")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.TestFaceDetection) },
+            onClick = { galleryLauncher.launch("image/*") },
             enabled = hasPermission && !busy,
         ) {
-            Text("Test Face Detection")
+            Text("Upload Photo")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.UseLatestPhotoAsReference) },
-            enabled = hasPermission && !busy,
+            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartSearch) },
+            enabled = hasPermission && uiState.queryPhotoUri != null && !busy,
         ) {
-            Text("Use Latest Photo as Reference")
+            Text(if (uiState.isSearching) "Searching…" else "Start Search")
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(
-            onClick = {
-                uiState.referencePhotoUri?.let { uri ->
-                    viewModel.onEvent(PersonAlbumContract.UiEvent.FindMatches(uri))
-                }
-            },
-            enabled = hasPermission && uiState.referencePhotoUri != null && !busy,
+            onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
+            enabled = uiState.matchUris.isNotEmpty(),
         ) {
-            Text("Find Matches")
+            Text("Share Matches")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        HorizontalDivider()
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = personName,
-            onValueChange = { personName = it },
-            label = { Text("Person name") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = {
-                uiState.referencePhotoUri?.let { uri ->
-                    viewModel.onEvent(PersonAlbumContract.UiEvent.CreatePerson(personName.trim(), uri))
-                }
-            },
-            enabled = hasPermission &&
-                personName.isNotBlank() &&
-                uiState.referencePhotoUri != null &&
-                !busy,
-        ) {
-            Text(if (uiState.isCreatingPerson) "Creating…" else "Create Person")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text("Indexed: ${uiState.indexedCount}")
-
-        if (uiState.faceCount > 0) {
+        uiState.queryPhotoUri?.let { uri ->
+            Text("Selected: …${uri.takeLast(40)}")
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Faces detected: ${uiState.faceCount}")
         }
 
-        uiState.referencePhotoUri?.let { uri ->
+        if (uiState.indexedCount > 0) {
+            Text("Indexed: ${uiState.indexedCount}")
             Spacer(modifier = Modifier.height(4.dp))
-            Text("Reference: …${uri.takeLast(40)}")
         }
 
-        if (uiState.matchCount > 0) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Matches found: ${uiState.matchCount}")
-        }
-
-        when {
-            uiState.isIndexing -> {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Indexing…")
-            }
-            uiState.isMatching -> {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Matching…")
-            }
-            uiState.isCreatingPerson -> {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Creating person…")
-            }
-            uiState.isLoadingAlbum -> {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Loading album…")
-            }
-        }
-
-        errorMessage?.let { msg ->
+        if (uiState.matchUris.isNotEmpty()) {
+            Text("Matches found: ${uiState.matchUris.size}")
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = msg, color = MaterialTheme.colorScheme.error)
-        }
-
-        if (uiState.persons.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
-            Text("People", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp),
+                    .heightIn(max = 400.dp),
             ) {
-                items(uiState.persons) { person ->
+                items(uiState.matchUris.take(20)) { uri ->
                     Text(
-                        text = person.name,
+                        text = "…${uri.takeLast(50)}",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                viewModel.onEvent(PersonAlbumContract.UiEvent.LoadAlbum(person.id))
-                            }
-                            .padding(vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyLarge,
+                            .padding(vertical = 6.dp),
+                        style = MaterialTheme.typography.bodySmall,
                     )
                     HorizontalDivider()
                 }
             }
         }
 
-        if (uiState.selectedPersonId != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider()
+        errorMessage?.let { msg ->
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Matched photos: ${uiState.albumUris.size}",
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareAlbum) },
-                enabled = uiState.albumUris.isNotEmpty() && !uiState.isLoadingAlbum,
-            ) {
-                Text("Share Album")
-            }
-
-            if (uiState.albumUris.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp),
-                ) {
-                    items(uiState.albumUris.take(20)) { uri ->
-                        Text(
-                            text = "…${uri.takeLast(50)}",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            }
+            Text(text = msg, color = MaterialTheme.colorScheme.error)
         }
     }
 }
