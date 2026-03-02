@@ -1,6 +1,5 @@
 package com.example.groupify.feature.personalbum.domain.usecase;
 
-import com.example.groupify.feature.personalbum.domain.detection.FaceDetector;
 import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder;
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository;
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository;
@@ -27,19 +26,15 @@ import javax.inject.Provider;
     "deprecation"
 })
 public final class SearchByPhotoUseCase_Factory implements Factory<SearchByPhotoUseCase> {
-  private final Provider<FaceDetector> faceDetectorProvider;
-
   private final Provider<FaceEmbedder> faceEmbedderProvider;
 
   private final Provider<FaceIndexRepository> faceIndexRepositoryProvider;
 
   private final Provider<PhotoRepository> photoRepositoryProvider;
 
-  public SearchByPhotoUseCase_Factory(Provider<FaceDetector> faceDetectorProvider,
-      Provider<FaceEmbedder> faceEmbedderProvider,
+  public SearchByPhotoUseCase_Factory(Provider<FaceEmbedder> faceEmbedderProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider,
       Provider<PhotoRepository> photoRepositoryProvider) {
-    this.faceDetectorProvider = faceDetectorProvider;
     this.faceEmbedderProvider = faceEmbedderProvider;
     this.faceIndexRepositoryProvider = faceIndexRepositoryProvider;
     this.photoRepositoryProvider = photoRepositoryProvider;
@@ -47,19 +42,17 @@ public final class SearchByPhotoUseCase_Factory implements Factory<SearchByPhoto
 
   @Override
   public SearchByPhotoUseCase get() {
-    return newInstance(faceDetectorProvider.get(), faceEmbedderProvider.get(), faceIndexRepositoryProvider.get(), photoRepositoryProvider.get());
+    return newInstance(faceEmbedderProvider.get(), faceIndexRepositoryProvider.get(), photoRepositoryProvider.get());
   }
 
-  public static SearchByPhotoUseCase_Factory create(Provider<FaceDetector> faceDetectorProvider,
-      Provider<FaceEmbedder> faceEmbedderProvider,
+  public static SearchByPhotoUseCase_Factory create(Provider<FaceEmbedder> faceEmbedderProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider,
       Provider<PhotoRepository> photoRepositoryProvider) {
-    return new SearchByPhotoUseCase_Factory(faceDetectorProvider, faceEmbedderProvider, faceIndexRepositoryProvider, photoRepositoryProvider);
+    return new SearchByPhotoUseCase_Factory(faceEmbedderProvider, faceIndexRepositoryProvider, photoRepositoryProvider);
   }
 
-  public static SearchByPhotoUseCase newInstance(FaceDetector faceDetector,
-      FaceEmbedder faceEmbedder, FaceIndexRepository faceIndexRepository,
-      PhotoRepository photoRepository) {
-    return new SearchByPhotoUseCase(faceDetector, faceEmbedder, faceIndexRepository, photoRepository);
+  public static SearchByPhotoUseCase newInstance(FaceEmbedder faceEmbedder,
+      FaceIndexRepository faceIndexRepository, PhotoRepository photoRepository) {
+    return new SearchByPhotoUseCase(faceEmbedder, faceIndexRepository, photoRepository);
   }
 }

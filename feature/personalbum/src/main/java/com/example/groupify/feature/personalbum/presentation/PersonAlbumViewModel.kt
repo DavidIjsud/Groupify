@@ -3,9 +3,11 @@ package com.example.groupify.feature.personalbum.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
+import com.example.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
 import com.example.groupify.feature.personalbum.presentation.model.MatchUiModel
+import com.example.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ import javax.inject.Inject
 class PersonAlbumViewModel @Inject constructor(
     private val indexFacesAndEmbeddingsUseCase: IndexFacesAndEmbeddingsUseCase,
     private val searchByPhotoUseCase: SearchByPhotoUseCase,
+    private val detectQueryFacesUseCase: DetectQueryFacesUseCase,
     private val faceIndexRepository: FaceIndexRepository,
 ) : ViewModel() {
 
@@ -37,6 +40,10 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.StartDetection -> onStartDetection()
             is PersonAlbumContract.UiEvent.ShareMatches -> onShareMatches()
             is PersonAlbumContract.UiEvent.DismissMessage -> _uiState.update { it.copy(userMessage = null) }
+            is PersonAlbumContract.UiEvent.ToggleFaceSelection -> onToggleFaceSelection(event.faceId)
+            is PersonAlbumContract.UiEvent.SelectAllFaces -> onSelectAllFaces()
+            is PersonAlbumContract.UiEvent.ClearFaceSelection -> onClearFaceSelection()
+            is PersonAlbumContract.UiEvent.SetMatchSensitivity -> onSetMatchSensitivity(event.percent)
         }
     }
 
@@ -45,11 +52,89 @@ class PersonAlbumViewModel @Inject constructor(
     }
 
     private fun onPickQueryPhoto(uri: String) {
-        _uiState.update { it.copy(selectedQueryPhotoUri = uri, matches = emptyList(), userMessage = null) }
+        _uiState.update {
+            it.copy(
+                selectedQueryPhotoUri = uri,
+                matches = emptyList(),
+                userMessage = null,
+                queryFaces = emptyList(),
+                focusedFaceId = null,
+            )
+        }
+        detectQueryFaces(uri)
+    }
+
+    private fun detectQueryFaces(uri: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isFaceLoading = true) }
+            try {
+                val faces = detectQueryFacesUseCase(uri)
+                val uiModels = faces.map { face ->
+                    QueryFaceUiModel(
+                        id = face.id,
+                        label = "Face ${face.id + 1}",
+                        boundingBox = face.boundingBox,
+                        isSelected = face.id == 0, // largest face selected by default
+                    )
+                }
+                _uiState.update {
+                    it.copy(
+                        queryFaces = uiModels,
+                        focusedFaceId = uiModels.firstOrNull()?.id,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(userMessage = e.message ?: "Could not detect faces in the selected photo.")
+                }
+            } finally {
+                _uiState.update { it.copy(isFaceLoading = false) }
+            }
+        }
+    }
+
+    private fun onToggleFaceSelection(faceId: Int) {
+        _uiState.update { state ->
+            val updatedFaces = state.queryFaces.map { face ->
+                if (face.id == faceId) face.copy(isSelected = !face.isSelected) else face
+            }
+            val isNowSelected = updatedFaces.firstOrNull { it.id == faceId }?.isSelected == true
+            state.copy(
+                queryFaces = updatedFaces,
+                focusedFaceId = if (isNowSelected) faceId else state.focusedFaceId,
+            )
+        }
+    }
+
+    private fun onSelectAllFaces() {
+        _uiState.update { state ->
+            state.copy(
+                queryFaces = state.queryFaces.map { it.copy(isSelected = true) },
+                focusedFaceId = state.focusedFaceId ?: state.queryFaces.firstOrNull()?.id,
+            )
+        }
+    }
+
+    private fun onClearFaceSelection() {
+        _uiState.update { state ->
+            state.copy(
+                queryFaces = state.queryFaces.map { it.copy(isSelected = false) },
+                focusedFaceId = null,
+            )
+        }
+    }
+
+    private fun onSetMatchSensitivity(percent: Int) {
+        _uiState.update { it.copy(matchSensitivityPercent = percent.coerceIn(60, 95)) }
     }
 
     private fun onStartDetection() {
         val queryUri = _uiState.value.selectedQueryPhotoUri ?: return
+        val selectedFaces = _uiState.value.queryFaces.filter { it.isSelected }
+        if (selectedFaces.isEmpty()) {
+            _uiState.update { it.copy(userMessage = "Select at least one face to search.") }
+            return
+        }
         if (_uiState.value.isPreparingGallery || _uiState.value.isDetecting) return
 
         viewModelScope.launch {
@@ -71,9 +156,11 @@ class PersonAlbumViewModel @Inject constructor(
                     _uiState.update { it.copy(isPreparingGallery = false) }
                 }
 
-                // Run face search
+                // Run face search with selected bounding boxes and sensitivity threshold
                 _uiState.update { it.copy(isDetecting = true, matches = emptyList()) }
-                val results = searchByPhotoUseCase(queryUri)
+                val threshold = _uiState.value.matchSensitivityPercent / 100f
+                val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
+                val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)
                 val matchUiModels = results.map { match ->
                     MatchUiModel(
                         uri = match.uri,

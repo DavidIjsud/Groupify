@@ -9,11 +9,15 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -24,7 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -40,6 +46,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,7 +59,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -61,8 +72,11 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import com.example.groupify.feature.personalbum.presentation.model.MatchUiModel
+import com.example.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
 import java.io.File
+import kotlin.math.roundToInt
 
 private val AccentPurple = Color(0xFF7B61FF)
 private val DarkBackground = Color(0xFF0E0E0E)
@@ -70,6 +84,7 @@ private val CardBackground = Color(0xFF1C1C1E)
 private val TextSecondary = Color(0xFF9E9E9E)
 private val ErrorBackground = Color(0xFF3A1C1C)
 private val ErrorText = Color(0xFFFF6B6B)
+private val SelectedChipBackground = Color(0xFF2A2040)
 
 @Composable
 fun PersonAlbumScreen(
@@ -192,74 +207,34 @@ fun PersonAlbumScreen(
                 }
             }
 
-            // Query photo upload card
+            // Query photo preview card with face bounding-box overlay
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CardBackground)
-                        .clickable(enabled = !busy) { launchGallery() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (uiState.selectedQueryPhotoUri != null) {
-                        AsyncImage(
-                            model = Uri.parse(uiState.selectedQueryPhotoUri),
-                            contentDescription = "Selected query photo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(16.dp)),
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0x55000000)),
-                        )
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CheckCircle,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(40.dp),
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Photo selected — tap to change",
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    } else {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CloudUpload,
-                                contentDescription = null,
-                                tint = TextSecondary,
-                                modifier = Modifier.size(48.dp),
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "Tap to upload a photo",
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Select from your gallery",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+                QueryPhotoCard(
+                    uiState = uiState,
+                    busy = busy,
+                    onTap = { launchGallery() },
+                )
+            }
+
+            // Face chips — visible once faces are detected in the query photo
+            if (uiState.queryFaces.isNotEmpty()) {
+                item {
+                    FaceSelectionSection(
+                        uiState = uiState,
+                        onToggle = { id -> viewModel.onEvent(PersonAlbumContract.UiEvent.ToggleFaceSelection(id)) },
+                        onSelectAll = { viewModel.onEvent(PersonAlbumContract.UiEvent.SelectAllFaces) },
+                        onClear = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearFaceSelection) },
+                    )
+                }
+            }
+
+            // Match sensitivity slider — shown once a query photo is selected
+            if (uiState.selectedQueryPhotoUri != null) {
+                item {
+                    SensitivitySlider(
+                        percent = uiState.matchSensitivityPercent,
+                        onValueChange = { viewModel.onEvent(PersonAlbumContract.UiEvent.SetMatchSensitivity(it)) },
+                    )
                 }
             }
 
@@ -286,7 +261,7 @@ fun PersonAlbumScreen(
                 }
             }
 
-            // Inline user message
+            // Inline user message (errors, warnings)
             if (uiState.userMessage != null) {
                 item {
                     Row(
@@ -369,9 +344,15 @@ fun PersonAlbumScreen(
 
             // Start Detection button
             item {
+                val hasSelectedFaces = uiState.queryFaces.any { it.isSelected }
+                val startEnabled = uiState.selectedQueryPhotoUri != null &&
+                    hasSelectedFaces &&
+                    !busy &&
+                    !uiState.isFaceLoading
+
                 Button(
                     onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartDetection) },
-                    enabled = uiState.selectedQueryPhotoUri != null && !busy,
+                    enabled = startEnabled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -383,7 +364,7 @@ fun PersonAlbumScreen(
                         disabledContentColor = TextSecondary,
                     ),
                 ) {
-                    if (busy) {
+                    if (busy || uiState.isFaceLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
                             color = Color.White,
@@ -393,6 +374,7 @@ fun PersonAlbumScreen(
                     }
                     Text(
                         text = when {
+                            uiState.isFaceLoading -> "Detecting faces…"
                             uiState.isPreparingGallery -> "Preparing gallery…"
                             uiState.isDetecting -> "Detecting…"
                             else -> "Start Detection"
@@ -452,6 +434,323 @@ fun PersonAlbumScreen(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Query photo preview card — image + ContentScale.Fit bounding-box overlay
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun QueryPhotoCard(
+    uiState: PersonAlbumContract.UiState,
+    busy: Boolean,
+    onTap: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .clickable(enabled = !busy) { onTap() },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (uiState.selectedQueryPhotoUri != null) {
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val containerW = constraints.maxWidth.toFloat()
+                val containerH = constraints.maxHeight.toFloat()
+
+                // Capture intrinsic image size once the image loads
+                var intrinsicSize by remember(uiState.selectedQueryPhotoUri) {
+                    mutableStateOf<Size?>(null)
+                }
+
+                AsyncImage(
+                    model = Uri.parse(uiState.selectedQueryPhotoUri),
+                    contentDescription = "Selected query photo",
+                    contentScale = ContentScale.Fit,
+                    onSuccess = { state: AsyncImagePainter.State.Success ->
+                        val s = state.painter.intrinsicSize
+                        if (s.width > 0f && s.height > 0f) intrinsicSize = s
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                // Draw bounding box for the focused face using ContentScale.Fit math
+                val focusedFace = uiState.queryFaces.firstOrNull { it.id == uiState.focusedFaceId }
+                val imgSize = intrinsicSize
+                if (focusedFace != null && imgSize != null) {
+                    val scale = minOf(containerW / imgSize.width, containerH / imgSize.height)
+                    val offsetX = (containerW - imgSize.width * scale) / 2f
+                    val offsetY = (containerH - imgSize.height * scale) / 2f
+                    val bb = focusedFace.boundingBox
+
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawRect(
+                            color = AccentPurple,
+                            topLeft = Offset(
+                                x = bb.left * scale + offsetX,
+                                y = bb.top * scale + offsetY,
+                            ),
+                            size = Size(
+                                width = (bb.right - bb.left) * scale,
+                                height = (bb.bottom - bb.top) * scale,
+                            ),
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                }
+
+                // Top-right check icon
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = AccentPurple,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(22.dp)
+                        .background(Color(0xCC000000), CircleShape),
+                )
+
+                // Bottom bar: face-loading indicator or "tap to change" hint
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color(0x99000000))
+                        .padding(vertical = 6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (uiState.isFaceLoading) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = AccentPurple,
+                                strokeWidth = 2.dp,
+                            )
+                            Text(
+                                text = "Detecting faces…",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Tap to change photo",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+        } else {
+            // Empty state — upload prompt
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CloudUpload,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(48.dp),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Tap to upload a photo",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Select from your gallery",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Face selection section — header row, chips, count
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun FaceSelectionSection(
+    uiState: PersonAlbumContract.UiState,
+    onToggle: (Int) -> Unit,
+    onSelectAll: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Select who to search",
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onSelectAll,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "Select all",
+                    color = AccentPurple,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            TextButton(
+                onClick = onClear,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "Clear",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(end = 8.dp),
+        ) {
+            items(uiState.queryFaces, key = { it.id }) { face ->
+                FaceChip(face = face, onClick = { onToggle(face.id) })
+            }
+        }
+
+        val selectedCount = uiState.queryFaces.count { it.isSelected }
+        val faceWord = if (uiState.queryFaces.size == 1) "face" else "faces"
+        Text(
+            text = "$selectedCount of ${uiState.queryFaces.size} $faceWord selected",
+            color = TextSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Individual face chip
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun FaceChip(
+    face: QueryFaceUiModel,
+    onClick: () -> Unit,
+) {
+    val borderColor = if (face.isSelected) AccentPurple else Color(0xFF3D3D3D)
+    val bgColor = if (face.isSelected) SelectedChipBackground else CardBackground
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
+            .background(bgColor)
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (face.isSelected) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = AccentPurple,
+                    modifier = Modifier.size(14.dp),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .border(1.dp, Color(0xFF555555), CircleShape),
+                )
+            }
+            Text(
+                text = face.label,
+                color = if (face.isSelected) Color.White else TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (face.isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Match sensitivity slider
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun SensitivitySlider(
+    percent: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBackground)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Match sensitivity",
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = "$percent%",
+                color = AccentPurple,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Slider(
+            value = percent.toFloat(),
+            onValueChange = { onValueChange(it.roundToInt()) },
+            valueRange = 60f..95f,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentPurple,
+                activeTrackColor = AccentPurple,
+                inactiveTrackColor = Color(0xFF3D3D3D),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(text = "60%", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+            Text(text = "95%", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Match result card
+// ---------------------------------------------------------------------------
+
 @Composable
 private fun MatchCard(
     match: MatchUiModel,
@@ -468,7 +767,6 @@ private fun MatchCard(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        // Score badge overlay
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
