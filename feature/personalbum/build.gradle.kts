@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.mlkit.face.detection)
     implementation(libs.tflite.interpreter)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.material.icons.extended)
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

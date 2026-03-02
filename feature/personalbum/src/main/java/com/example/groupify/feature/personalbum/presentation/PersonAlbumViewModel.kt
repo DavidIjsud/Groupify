@@ -1,10 +1,11 @@
-// feature/personalbum/src/main/java/com/example/groupify/feature/personalbum/presentation/PersonAlbumViewModel.kt
 package com.example.groupify.feature.personalbum.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
+import com.example.groupify.feature.personalbum.presentation.model.MatchUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,6 +22,7 @@ import javax.inject.Inject
 class PersonAlbumViewModel @Inject constructor(
     private val indexFacesAndEmbeddingsUseCase: IndexFacesAndEmbeddingsUseCase,
     private val searchByPhotoUseCase: SearchByPhotoUseCase,
+    private val faceIndexRepository: FaceIndexRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonAlbumContract.UiState())
@@ -30,62 +33,69 @@ class PersonAlbumViewModel @Inject constructor(
 
     fun onEvent(event: PersonAlbumContract.UiEvent) {
         when (event) {
-            is PersonAlbumContract.UiEvent.StartIndexing -> onStartIndexing()
             is PersonAlbumContract.UiEvent.PickQueryPhoto -> onPickQueryPhoto(event.uri)
-            is PersonAlbumContract.UiEvent.StartSearch -> onStartSearch()
+            is PersonAlbumContract.UiEvent.StartDetection -> onStartDetection()
             is PersonAlbumContract.UiEvent.ShareMatches -> onShareMatches()
+            is PersonAlbumContract.UiEvent.DismissMessage -> _uiState.update { it.copy(userMessage = null) }
         }
     }
 
     fun onPermissionDenied() {
-        viewModelScope.launch {
-            _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("Permission required"))
-        }
-    }
-
-    private fun onStartIndexing() {
-        viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(isIndexing = true, indexedCount = 0) }
-                indexFacesAndEmbeddingsUseCase().collect { progress ->
-                    _uiState.update { it.copy(indexedCount = progress.current) }
-                }
-            } catch (e: Exception) {
-                _uiEffect.emit(
-                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Indexing failed")
-                )
-            } finally {
-                _uiState.update { it.copy(isIndexing = false) }
-            }
-        }
+        _uiState.update { it.copy(userMessage = "Storage permission is required to access your photos.") }
     }
 
     private fun onPickQueryPhoto(uri: String) {
-        _uiState.update { it.copy(queryPhotoUri = uri, matchUris = emptyList(), error = null) }
+        _uiState.update { it.copy(selectedQueryPhotoUri = uri, matches = emptyList(), userMessage = null) }
     }
 
-    private fun onStartSearch() {
-        val queryUri = _uiState.value.queryPhotoUri ?: return
+    private fun onStartDetection() {
+        val queryUri = _uiState.value.selectedQueryPhotoUri ?: return
+        if (_uiState.value.isPreparingGallery || _uiState.value.isDetecting) return
+
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(isSearching = true, matchUris = emptyList()) }
+                // Auto-index if the face DB is empty
+                val storedFaces = faceIndexRepository.getAllFaces().first()
+                if (storedFaces.isEmpty()) {
+                    _uiState.update {
+                        it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
+                    }
+                    indexFacesAndEmbeddingsUseCase().collect { progress ->
+                        _uiState.update {
+                            it.copy(
+                                preparingProgressCurrent = progress.current,
+                                preparingProgressTotal = progress.total,
+                            )
+                        }
+                    }
+                    _uiState.update { it.copy(isPreparingGallery = false) }
+                }
+
+                // Run face search
+                _uiState.update { it.copy(isDetecting = true, matches = emptyList()) }
                 val results = searchByPhotoUseCase(queryUri)
-                _uiState.update { it.copy(matchUris = results) }
+                val matchUiModels = results.map { match ->
+                    MatchUiModel(
+                        uri = match.uri,
+                        scorePercent = (match.score * 100).toInt().coerceIn(0, 100),
+                    )
+                }
+                _uiState.update { it.copy(matches = matchUiModels) }
+            } catch (e: IllegalArgumentException) {
+                _uiState.update { it.copy(userMessage = e.message ?: "No face detected in the selected photo.") }
             } catch (e: Exception) {
-                _uiEffect.emit(
-                    PersonAlbumContract.UiEffect.ShowError(e.message ?: "Search failed")
-                )
+                _uiState.update { it.copy(userMessage = e.message ?: "Detection failed. Please try again.") }
             } finally {
-                _uiState.update { it.copy(isSearching = false) }
+                _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
             }
         }
     }
 
     private fun onShareMatches() {
         viewModelScope.launch {
-            val uris = _uiState.value.matchUris
+            val uris = _uiState.value.matches.map { it.uri }
             if (uris.isEmpty()) {
-                _uiEffect.emit(PersonAlbumContract.UiEffect.ShowError("No matches to share"))
+                _uiState.update { it.copy(userMessage = "No matches to share.") }
             } else {
                 _uiEffect.emit(PersonAlbumContract.UiEffect.ShareUris(uris))
             }
