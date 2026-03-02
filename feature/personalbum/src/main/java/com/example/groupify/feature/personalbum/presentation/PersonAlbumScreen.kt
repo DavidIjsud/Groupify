@@ -144,6 +144,7 @@ fun PersonAlbumScreen(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is PersonAlbumContract.UiEffect.ShareUris -> {
+                    if (effect.uris.isEmpty()) return@collect
                     val parsedUris = effect.uris.map { Uri.parse(it) }
                     val clip = ClipData.newUri(context.contentResolver, "Image", parsedUris.first())
                         .also { c -> parsedUris.drop(1).forEach { uri -> c.addItem(ClipData.Item(uri)) } }
@@ -303,7 +304,10 @@ fun PersonAlbumScreen(
                             modifier = Modifier.weight(1f),
                         )
                         if (!hasPermission) {
-                            TextButton(onClick = { permissionLauncher.launch(permission) }) {
+                            TextButton(onClick = {
+                                pendingAction = { galleryLauncher.launch("image/*") }
+                                permissionLauncher.launch(permission)
+                            }) {
                                 Text(
                                     text = "Grant",
                                     color = AccentPurple,
