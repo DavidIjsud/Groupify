@@ -1,5 +1,6 @@
 package com.example.groupify.feature.personalbum.presentation;
 
+import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository;
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase;
 import com.example.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase;
 import dagger.internal.DaggerGenerated;
@@ -29,27 +30,32 @@ public final class PersonAlbumViewModel_Factory implements Factory<PersonAlbumVi
 
   private final Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider;
 
+  private final Provider<FaceIndexRepository> faceIndexRepositoryProvider;
+
   public PersonAlbumViewModel_Factory(
       Provider<IndexFacesAndEmbeddingsUseCase> indexFacesAndEmbeddingsUseCaseProvider,
-      Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider) {
+      Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider,
+      Provider<FaceIndexRepository> faceIndexRepositoryProvider) {
     this.indexFacesAndEmbeddingsUseCaseProvider = indexFacesAndEmbeddingsUseCaseProvider;
     this.searchByPhotoUseCaseProvider = searchByPhotoUseCaseProvider;
+    this.faceIndexRepositoryProvider = faceIndexRepositoryProvider;
   }
 
   @Override
   public PersonAlbumViewModel get() {
-    return newInstance(indexFacesAndEmbeddingsUseCaseProvider.get(), searchByPhotoUseCaseProvider.get());
+    return newInstance(indexFacesAndEmbeddingsUseCaseProvider.get(), searchByPhotoUseCaseProvider.get(), faceIndexRepositoryProvider.get());
   }
 
   public static PersonAlbumViewModel_Factory create(
       Provider<IndexFacesAndEmbeddingsUseCase> indexFacesAndEmbeddingsUseCaseProvider,
-      Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider) {
-    return new PersonAlbumViewModel_Factory(indexFacesAndEmbeddingsUseCaseProvider, searchByPhotoUseCaseProvider);
+      Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider,
+      Provider<FaceIndexRepository> faceIndexRepositoryProvider) {
+    return new PersonAlbumViewModel_Factory(indexFacesAndEmbeddingsUseCaseProvider, searchByPhotoUseCaseProvider, faceIndexRepositoryProvider);
   }
 
   public static PersonAlbumViewModel newInstance(
       IndexFacesAndEmbeddingsUseCase indexFacesAndEmbeddingsUseCase,
-      SearchByPhotoUseCase searchByPhotoUseCase) {
-    return new PersonAlbumViewModel(indexFacesAndEmbeddingsUseCase, searchByPhotoUseCase);
+      SearchByPhotoUseCase searchByPhotoUseCase, FaceIndexRepository faceIndexRepository) {
+    return new PersonAlbumViewModel(indexFacesAndEmbeddingsUseCase, searchByPhotoUseCase, faceIndexRepository);
   }
 }
