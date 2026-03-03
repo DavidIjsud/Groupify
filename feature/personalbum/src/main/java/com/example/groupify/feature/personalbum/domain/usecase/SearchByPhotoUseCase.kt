@@ -14,10 +14,22 @@ class SearchByPhotoUseCase @Inject constructor(
     private val faceIndexRepository: FaceIndexRepository,
     private val photoRepository: PhotoRepository,
 ) {
+    /**
+     * @param queryPhotoUri  URI of the photo whose faces are being searched.
+     * @param selectedFaces  Bounding boxes of the query faces the user selected.
+     * @param threshold      Minimum cosine similarity for a stored face to be considered a match.
+     * @param margin         Minimum gap between the best and second-best similarity scores for a
+     *                       given (query face, photo) pair. Rejects ambiguous matches where two
+     *                       different stored faces in the same photo score almost equally well
+     *                       against the query, which is a reliable false-positive signal.
+     *                       Defaults to [DEFAULT_MARGIN]. Single-face photos always pass because
+     *                       their second-best score is Float.NEGATIVE_INFINITY.
+     */
     suspend operator fun invoke(
         queryPhotoUri: String,
         selectedFaces: List<BoundingBox>,
         threshold: Float,
+        margin: Float = DEFAULT_MARGIN,
     ): List<PhotoMatch> {
         require(selectedFaces.isNotEmpty()) { "Select at least one face to search" }
 
@@ -26,22 +38,46 @@ class SearchByPhotoUseCase @Inject constructor(
             throw IllegalStateException("No indexed faces yet. Run indexing first.")
         }
 
-        // For each selected query face, embed and compare against all stored face embeddings.
-        // Track the single best similarity score per photoId across all query faces — this lets
-        // a multi-face search return a photo if ANY of the selected faces match it.
-        val bestScoreByPhoto = mutableMapOf<String, Float>()
+        // bestScoreByPhoto accumulates the highest qualifying score across all selected query
+        // faces. A photo ends up here only after passing both the threshold and the margin test.
+        val bestScoreByPhoto = HashMap<String, Float>()
+
         for (boundingBox in selectedFaces) {
             val queryEmbedding = faceEmbedder.embedFace(queryPhotoUri, boundingBox)
+
+            // For this query face, scan every stored embedding and maintain the top-2
+            // similarity scores per photoId without any Pair/object allocations.
+            //
+            // bestByPhoto[id]   = highest sim seen so far for that photoId
+            // secondByPhoto[id] = second-highest sim (NEGATIVE_INFINITY when only one seen)
+            val bestByPhoto = HashMap<String, Float>()
+            val secondByPhoto = HashMap<String, Float>()
+
             for (storedFace in storedFaces) {
-                // Clamp to [-1, 1] as a safety guard; both embeddings are L2-normalized so
-                // this should already hold, but floating-point drift can push outside the range.
                 val sim = cosineSimilarity(queryEmbedding, storedFace.embedding)
                     .coerceIn(-1f, 1f)
-                if (sim >= threshold) {
-                    val current = bestScoreByPhoto[storedFace.photoId]
-                    if (current == null || sim > current) {
-                        bestScoreByPhoto[storedFace.photoId] = sim
+                val id = storedFace.photoId
+                val prev = bestByPhoto.getOrDefault(id, Float.NEGATIVE_INFINITY)
+                if (sim > prev) {
+                    secondByPhoto[id] = prev      // old best becomes second
+                    bestByPhoto[id] = sim
+                } else {
+                    val prevSecond = secondByPhoto.getOrDefault(id, Float.NEGATIVE_INFINITY)
+                    if (sim > prevSecond) {
+                        secondByPhoto[id] = sim
                     }
+                }
+            }
+
+            // Apply threshold + margin filter and promote passing photos into the shared result.
+            for ((photoId, bestSim) in bestByPhoto) {
+                if (bestSim < threshold) continue
+                val secondSim = secondByPhoto.getOrDefault(photoId, Float.NEGATIVE_INFINITY)
+                if (bestSim - secondSim < margin) continue  // ambiguous — two faces too close
+
+                val current = bestScoreByPhoto[photoId]
+                if (current == null || bestSim > current) {
+                    bestScoreByPhoto[photoId] = bestSim
                 }
             }
         }
@@ -58,5 +94,10 @@ class SearchByPhotoUseCase @Inject constructor(
                 PhotoMatch(uri = uri, score = score)
             }
             .sortedByDescending { it.score }
+    }
+
+    companion object {
+        /** Minimum best-vs-second-best gap required to accept a match as unambiguous. */
+        const val DEFAULT_MARGIN = 0.06f
     }
 }
