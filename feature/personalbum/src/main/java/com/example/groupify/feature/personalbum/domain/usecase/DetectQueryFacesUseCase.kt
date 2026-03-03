@@ -11,13 +11,14 @@ class DetectQueryFacesUseCase @Inject constructor(
         val detected = faceDetector.detectFaces(photoUri)
         if (detected.isEmpty()) throw IllegalStateException("No faces detected in the selected photo")
 
+        val base = photoUri.hashCode()
         return detected
             .sortedByDescending { face ->
                 val bb = face.boundingBox
                 (bb.right - bb.left) * (bb.bottom - bb.top)
             }
             .mapIndexed { index, face ->
-                QueryFace(id = index, boundingBox = face.boundingBox)
+                QueryFace(id = (base * 31) + index, boundingBox = face.boundingBox)
             }
     }
 }

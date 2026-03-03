@@ -61,6 +61,7 @@ class PersonAlbumViewModel @Inject constructor(
                 userMessage = null,
                 queryFaces = emptyList(),
                 focusedFaceId = null,
+                isFaceLoading = true,
             )
         }
         detectQueryFaces(uri)
@@ -68,7 +69,6 @@ class PersonAlbumViewModel @Inject constructor(
 
     private fun detectQueryFaces(uri: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isFaceLoading = true) }
             try {
                 val faces = detectQueryFacesUseCase(uri)
 
@@ -76,12 +76,12 @@ class PersonAlbumViewModel @Inject constructor(
                 val thumbnails = runCatching { buildQueryFaceThumbnailsUseCase(uri, faces) }
                     .getOrDefault(emptyMap())
 
-                val uiModels = faces.map { face ->
+                val uiModels = faces.mapIndexed { index, face ->
                     QueryFaceUiModel(
                         id = face.id,
-                        label = "Face ${face.id + 1}",
+                        label = "Face ${index + 1}",
                         boundingBox = face.boundingBox,
-                        isSelected = face.id == 0,
+                        isSelected = index == 0,
                         thumbnailUri = thumbnails[face.id],
                     )
                 }

@@ -629,7 +629,7 @@ private fun FaceSelectionSection(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(end = 8.dp),
         ) {
-            items(uiState.queryFaces, key = { it.id }) { face ->
+            items(uiState.queryFaces, key = { "${uiState.selectedQueryPhotoUri}:${it.id}" }) { face ->
                 FaceChip(face = face, onClick = { onToggle(face.id) })
             }
         }
