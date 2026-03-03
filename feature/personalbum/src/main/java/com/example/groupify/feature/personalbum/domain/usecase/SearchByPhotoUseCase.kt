@@ -22,17 +22,25 @@ class SearchByPhotoUseCase @Inject constructor(
         require(selectedFaces.isNotEmpty()) { "Select at least one face to search" }
 
         val storedFaces = faceIndexRepository.getAllFaces().first()
+        if (storedFaces.isEmpty()) {
+            throw IllegalStateException("No indexed faces yet. Run indexing first.")
+        }
 
-        // For each selected query face, embed and compare; keep best score per photoId.
+        // For each selected query face, embed and compare against all stored face embeddings.
+        // Track the single best similarity score per photoId across all query faces — this lets
+        // a multi-face search return a photo if ANY of the selected faces match it.
         val bestScoreByPhoto = mutableMapOf<String, Float>()
         for (boundingBox in selectedFaces) {
             val queryEmbedding = faceEmbedder.embedFace(queryPhotoUri, boundingBox)
-            for (face in storedFaces) {
-                val sim = cosineSimilarity(queryEmbedding, face.embedding)
+            for (storedFace in storedFaces) {
+                // Clamp to [-1, 1] as a safety guard; both embeddings are L2-normalized so
+                // this should already hold, but floating-point drift can push outside the range.
+                val sim = cosineSimilarity(queryEmbedding, storedFace.embedding)
+                    .coerceIn(-1f, 1f)
                 if (sim >= threshold) {
-                    val current = bestScoreByPhoto[face.photoId]
+                    val current = bestScoreByPhoto[storedFace.photoId]
                     if (current == null || sim > current) {
-                        bestScoreByPhoto[face.photoId] = sim
+                        bestScoreByPhoto[storedFace.photoId] = sim
                     }
                 }
             }
