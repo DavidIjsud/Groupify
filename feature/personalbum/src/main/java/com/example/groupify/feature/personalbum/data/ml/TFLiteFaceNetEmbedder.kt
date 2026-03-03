@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import android.os.Build
 import androidx.exifinterface.media.ExifInterface
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
 import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder
@@ -54,8 +55,11 @@ class TFLiteFaceNetEmbedder @Inject constructor(
         }
 
         return withContext(Dispatchers.Default) {
-            // Guard against HARDWARE config (should not occur after our decode, but be safe).
-            val softBitmap = if (sourceBitmap.config == Bitmap.Config.HARDWARE) {
+            // Guard against HARDWARE config (API 26+; should not occur after our decode, but be safe).
+            // Bitmap.Config.HARDWARE only exists on API 26+, so it must be guarded to satisfy minSdk 24.
+            val softBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                sourceBitmap.config == Bitmap.Config.HARDWARE
+            ) {
                 sourceBitmap.copy(Bitmap.Config.ARGB_8888, false).also { sourceBitmap.recycle() }
             } else {
                 sourceBitmap
