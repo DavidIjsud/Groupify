@@ -15,7 +15,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -66,8 +65,10 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -456,9 +457,13 @@ private fun QueryPhotoCard(
         contentAlignment = Alignment.Center,
     ) {
         if (uiState.selectedQueryPhotoUri != null) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val containerW = constraints.maxWidth.toFloat()
-                val containerH = constraints.maxHeight.toFloat()
+            var containerPx by remember(uiState.selectedQueryPhotoUri) {
+                mutableStateOf<IntSize?>(null)
+            }
+
+            Box(modifier = Modifier.fillMaxSize().onSizeChanged { containerPx = it }) {
+                val containerW = containerPx?.width?.toFloat()
+                val containerH = containerPx?.height?.toFloat()
 
                 // Capture intrinsic image size once the image loads
                 var intrinsicSize by remember(uiState.selectedQueryPhotoUri) {
@@ -479,7 +484,7 @@ private fun QueryPhotoCard(
                 // Draw bounding box for the focused face using ContentScale.Fit math
                 val focusedFace = uiState.queryFaces.firstOrNull { it.id == uiState.focusedFaceId }
                 val imgSize = intrinsicSize
-                if (focusedFace != null && imgSize != null) {
+                if (focusedFace != null && imgSize != null && containerW != null && containerH != null) {
                     val scale = minOf(containerW / imgSize.width, containerH / imgSize.height)
                     val offsetX = (containerW - imgSize.width * scale) / 2f
                     val offsetY = (containerH - imgSize.height * scale) / 2f
