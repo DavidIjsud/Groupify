@@ -67,9 +67,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.example.groupify.feature.personalbum.R
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -172,7 +175,7 @@ fun PersonAlbumScreen(
                         clipData = clip
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Share via"))
+                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.photomatch_share_via)))
                 }
             }
         }
@@ -197,13 +200,13 @@ fun PersonAlbumScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "PhotoMatch",
+                        text = stringResource(R.string.photomatch_app_title),
                         style = MaterialTheme.typography.headlineMedium,
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        text = "Find similar photos instantly",
+                        text = stringResource(R.string.photomatch_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary,
                     )
@@ -260,7 +263,7 @@ fun PersonAlbumScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Take a Photo")
+                    Text(stringResource(R.string.photomatch_btn_take_photo))
                 }
             }
 
@@ -287,7 +290,7 @@ fun PersonAlbumScreen(
                                 permissionLauncher.launch(permission)
                             }) {
                                 Text(
-                                    text = "Grant",
+                                    text = stringResource(R.string.photomatch_btn_grant_permission),
                                     color = AccentPurple,
                                     style = MaterialTheme.typography.labelSmall,
                                 )
@@ -299,7 +302,7 @@ fun PersonAlbumScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Clear,
-                                contentDescription = "Dismiss",
+                                contentDescription = stringResource(R.string.photomatch_cd_dismiss),
                                 tint = TextSecondary,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -325,7 +328,7 @@ fun PersonAlbumScreen(
                                 trackColor = Color(0xFF3D3D3D),
                             )
                             Text(
-                                text = "Indexing photos… ${uiState.preparingProgressCurrent} / ${uiState.preparingProgressTotal}",
+                                text = stringResource(R.string.photomatch_indexing_progress, uiState.preparingProgressCurrent, uiState.preparingProgressTotal),
                                 color = TextSecondary,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -336,7 +339,7 @@ fun PersonAlbumScreen(
                                 trackColor = Color(0xFF3D3D3D),
                             )
                             Text(
-                                text = "Preparing gallery…",
+                                text = stringResource(R.string.photomatch_preparing_gallery),
                                 color = TextSecondary,
                                 style = MaterialTheme.typography.bodySmall,
                             )
@@ -377,10 +380,10 @@ fun PersonAlbumScreen(
                     }
                     Text(
                         text = when {
-                            uiState.isFaceLoading -> "Detecting faces…"
-                            uiState.isPreparingGallery -> "Preparing gallery…"
-                            uiState.isDetecting -> "Detecting…"
-                            else -> "Start Detection"
+                            uiState.isFaceLoading -> stringResource(R.string.photomatch_detecting_faces)
+                            uiState.isPreparingGallery -> stringResource(R.string.photomatch_preparing_gallery)
+                            uiState.isDetecting -> stringResource(R.string.photomatch_detecting)
+                            else -> stringResource(R.string.photomatch_btn_start_detection)
                         },
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
@@ -393,7 +396,7 @@ fun PersonAlbumScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "${uiState.matches.size} Similar Matches Found",
+                        text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
                         color = Color.White,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -428,7 +431,7 @@ fun PersonAlbumScreen(
                             modifier = Modifier.size(18.dp),
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Share Matches")
+                        Text(stringResource(R.string.photomatch_btn_share_matches))
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -472,7 +475,7 @@ private fun QueryPhotoCard(
 
                 AsyncImage(
                     model = Uri.parse(uiState.selectedQueryPhotoUri),
-                    contentDescription = "Selected query photo",
+                    contentDescription = stringResource(R.string.photomatch_cd_query_photo),
                     contentScale = ContentScale.Fit,
                     onSuccess = { state: AsyncImagePainter.State.Success ->
                         val s = state.painter.intrinsicSize
@@ -538,14 +541,14 @@ private fun QueryPhotoCard(
                                 strokeWidth = 2.dp,
                             )
                             Text(
-                                text = "Detecting faces…",
+                                text = stringResource(R.string.photomatch_detecting_faces),
                                 color = Color.White,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     } else {
                         Text(
-                            text = "Tap to change photo",
+                            text = stringResource(R.string.photomatch_tap_to_change_photo),
                             color = Color.White,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -566,14 +569,14 @@ private fun QueryPhotoCard(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Tap to upload a photo",
+                    text = stringResource(R.string.photomatch_tap_to_upload_photo),
                     color = Color.White,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Select from your gallery",
+                    text = stringResource(R.string.photomatch_select_from_gallery),
                     color = TextSecondary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -602,7 +605,7 @@ private fun FaceSelectionSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Select who to search",
+                text = stringResource(R.string.photomatch_select_who_to_search),
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
@@ -613,7 +616,7 @@ private fun FaceSelectionSection(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
             ) {
                 Text(
-                    text = "Select all",
+                    text = stringResource(R.string.photomatch_btn_select_all),
                     color = AccentPurple,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -623,7 +626,7 @@ private fun FaceSelectionSection(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
             ) {
                 Text(
-                    text = "Clear",
+                    text = stringResource(R.string.photomatch_btn_clear_selection),
                     color = TextSecondary,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -640,9 +643,8 @@ private fun FaceSelectionSection(
         }
 
         val selectedCount = uiState.queryFaces.count { it.isSelected }
-        val faceWord = if (uiState.queryFaces.size == 1) "face" else "faces"
         Text(
-            text = "$selectedCount of ${uiState.queryFaces.size} $faceWord selected",
+            text = pluralStringResource(R.plurals.photomatch_faces_selected, uiState.queryFaces.size, selectedCount, uiState.queryFaces.size),
             color = TextSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
@@ -753,13 +755,13 @@ private fun SensitivitySlider(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Match sensitivity",
+                text = stringResource(R.string.photomatch_match_sensitivity),
                 color = Color.White,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
             )
             Text(
-                text = "$percent%",
+                text = stringResource(R.string.photomatch_percent_format, percent),
                 color = AccentPurple,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
@@ -780,8 +782,8 @@ private fun SensitivitySlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(text = "60%", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-            Text(text = "95%", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+            Text(text = stringResource(R.string.photomatch_sensitivity_min), color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+            Text(text = stringResource(R.string.photomatch_sensitivity_max), color = TextSecondary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -815,7 +817,7 @@ private fun MatchCard(
                 .padding(horizontal = 6.dp, vertical = 3.dp),
         ) {
             Text(
-                text = "${match.scorePercent}%",
+                text = stringResource(R.string.photomatch_percent_format, match.scorePercent),
                 color = Color.White,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
