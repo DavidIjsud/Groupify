@@ -6,11 +6,13 @@ import com.example.groupify.feature.personalbum.data.ml.TFLiteFaceNetEmbedder
 import com.example.groupify.feature.personalbum.data.repository.FaceIndexRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PersonRepositoryImpl
 import com.example.groupify.feature.personalbum.data.repository.PhotoRepositoryImpl
+import com.example.groupify.feature.personalbum.data.thumbnail.AndroidQueryFaceThumbnailGenerator
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.example.groupify.feature.personalbum.domain.repository.PersonRepository
 import com.example.groupify.feature.personalbum.domain.repository.PhotoRepository
+import com.example.groupify.feature.personalbum.domain.thumbnail.QueryFaceThumbnailGenerator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -40,4 +42,10 @@ abstract class PersonAlbumModule {
     @Binds
     @Singleton
     abstract fun bindFaceEmbedder(impl: TFLiteFaceNetEmbedder): FaceEmbedder
+
+    @Binds
+    @Singleton
+    abstract fun bindQueryFaceThumbnailGenerator(
+        impl: AndroidQueryFaceThumbnailGenerator,
+    ): QueryFaceThumbnailGenerator
 }

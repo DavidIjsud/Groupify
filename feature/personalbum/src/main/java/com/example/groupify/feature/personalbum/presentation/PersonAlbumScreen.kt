@@ -34,9 +34,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -643,7 +645,7 @@ private fun FaceSelectionSection(
 }
 
 // ---------------------------------------------------------------------------
-// Individual face chip
+// Individual face chip — circular thumbnail + label + selection badge
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -660,27 +662,59 @@ private fun FaceChip(
             .border(1.5.dp, borderColor, RoundedCornerShape(10.dp))
             .background(bgColor)
             .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (face.isSelected) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = AccentPurple,
-                    modifier = Modifier.size(14.dp),
-                )
-            } else {
+            // Circular thumbnail with selection badge in bottom-right
+            Box(modifier = Modifier.size(40.dp)) {
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
-                        .border(1.dp, Color(0xFF555555), CircleShape),
-                )
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(Color(0xFF2C2C2E)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (face.thumbnailUri != null) {
+                        AsyncImage(
+                            model = Uri.parse(face.thumbnailUri),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Person,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+
+                // Small check badge anchored at bottom-end of the 40dp box
+                if (face.isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .align(Alignment.BottomEnd)
+                            .clip(CircleShape)
+                            .background(AccentPurple),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(9.dp),
+                        )
+                    }
+                }
             }
+
             Text(
                 text = face.label,
                 color = if (face.isSelected) Color.White else TextSecondary,

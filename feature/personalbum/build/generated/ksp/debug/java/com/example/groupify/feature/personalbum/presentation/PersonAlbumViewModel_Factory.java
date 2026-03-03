@@ -1,6 +1,7 @@
 package com.example.groupify.feature.personalbum.presentation;
 
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository;
+import com.example.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase;
 import com.example.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase;
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase;
 import com.example.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase;
@@ -33,36 +34,42 @@ public final class PersonAlbumViewModel_Factory implements Factory<PersonAlbumVi
 
   private final Provider<DetectQueryFacesUseCase> detectQueryFacesUseCaseProvider;
 
+  private final Provider<BuildQueryFaceThumbnailsUseCase> buildQueryFaceThumbnailsUseCaseProvider;
+
   private final Provider<FaceIndexRepository> faceIndexRepositoryProvider;
 
   public PersonAlbumViewModel_Factory(
       Provider<IndexFacesAndEmbeddingsUseCase> indexFacesAndEmbeddingsUseCaseProvider,
       Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider,
       Provider<DetectQueryFacesUseCase> detectQueryFacesUseCaseProvider,
+      Provider<BuildQueryFaceThumbnailsUseCase> buildQueryFaceThumbnailsUseCaseProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider) {
     this.indexFacesAndEmbeddingsUseCaseProvider = indexFacesAndEmbeddingsUseCaseProvider;
     this.searchByPhotoUseCaseProvider = searchByPhotoUseCaseProvider;
     this.detectQueryFacesUseCaseProvider = detectQueryFacesUseCaseProvider;
+    this.buildQueryFaceThumbnailsUseCaseProvider = buildQueryFaceThumbnailsUseCaseProvider;
     this.faceIndexRepositoryProvider = faceIndexRepositoryProvider;
   }
 
   @Override
   public PersonAlbumViewModel get() {
-    return newInstance(indexFacesAndEmbeddingsUseCaseProvider.get(), searchByPhotoUseCaseProvider.get(), detectQueryFacesUseCaseProvider.get(), faceIndexRepositoryProvider.get());
+    return newInstance(indexFacesAndEmbeddingsUseCaseProvider.get(), searchByPhotoUseCaseProvider.get(), detectQueryFacesUseCaseProvider.get(), buildQueryFaceThumbnailsUseCaseProvider.get(), faceIndexRepositoryProvider.get());
   }
 
   public static PersonAlbumViewModel_Factory create(
       Provider<IndexFacesAndEmbeddingsUseCase> indexFacesAndEmbeddingsUseCaseProvider,
       Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider,
       Provider<DetectQueryFacesUseCase> detectQueryFacesUseCaseProvider,
+      Provider<BuildQueryFaceThumbnailsUseCase> buildQueryFaceThumbnailsUseCaseProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider) {
-    return new PersonAlbumViewModel_Factory(indexFacesAndEmbeddingsUseCaseProvider, searchByPhotoUseCaseProvider, detectQueryFacesUseCaseProvider, faceIndexRepositoryProvider);
+    return new PersonAlbumViewModel_Factory(indexFacesAndEmbeddingsUseCaseProvider, searchByPhotoUseCaseProvider, detectQueryFacesUseCaseProvider, buildQueryFaceThumbnailsUseCaseProvider, faceIndexRepositoryProvider);
   }
 
   public static PersonAlbumViewModel newInstance(
       IndexFacesAndEmbeddingsUseCase indexFacesAndEmbeddingsUseCase,
       SearchByPhotoUseCase searchByPhotoUseCase, DetectQueryFacesUseCase detectQueryFacesUseCase,
+      BuildQueryFaceThumbnailsUseCase buildQueryFaceThumbnailsUseCase,
       FaceIndexRepository faceIndexRepository) {
-    return new PersonAlbumViewModel(indexFacesAndEmbeddingsUseCase, searchByPhotoUseCase, detectQueryFacesUseCase, faceIndexRepository);
+    return new PersonAlbumViewModel(indexFacesAndEmbeddingsUseCase, searchByPhotoUseCase, detectQueryFacesUseCase, buildQueryFaceThumbnailsUseCase, faceIndexRepository);
   }
 }

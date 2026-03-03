@@ -3,6 +3,7 @@ package com.example.groupify.feature.personalbum.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.groupify.feature.personalbum.domain.repository.FaceIndexRepository
+import com.example.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import com.example.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
@@ -25,6 +26,7 @@ class PersonAlbumViewModel @Inject constructor(
     private val indexFacesAndEmbeddingsUseCase: IndexFacesAndEmbeddingsUseCase,
     private val searchByPhotoUseCase: SearchByPhotoUseCase,
     private val detectQueryFacesUseCase: DetectQueryFacesUseCase,
+    private val buildQueryFaceThumbnailsUseCase: BuildQueryFaceThumbnailsUseCase,
     private val faceIndexRepository: FaceIndexRepository,
 ) : ViewModel() {
 
@@ -69,12 +71,18 @@ class PersonAlbumViewModel @Inject constructor(
             _uiState.update { it.copy(isFaceLoading = true) }
             try {
                 val faces = detectQueryFacesUseCase(uri)
+
+                // Generate thumbnails; gracefully fall back to null on any failure
+                val thumbnails = runCatching { buildQueryFaceThumbnailsUseCase(uri, faces) }
+                    .getOrDefault(emptyMap())
+
                 val uiModels = faces.map { face ->
                     QueryFaceUiModel(
                         id = face.id,
                         label = "Face ${face.id + 1}",
                         boundingBox = face.boundingBox,
-                        isSelected = face.id == 0, // largest face selected by default
+                        isSelected = face.id == 0,
+                        thumbnailUri = thumbnails[face.id],
                     )
                 }
                 _uiState.update {

@@ -7,4 +7,5 @@ data class QueryFaceUiModel(
     val label: String,
     val boundingBox: BoundingBox,
     val isSelected: Boolean,
+    val thumbnailUri: String? = null,
 )
