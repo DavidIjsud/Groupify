@@ -27,6 +27,10 @@ class PhotoRepositoryImpl @Inject constructor(
         photoDao.markPhotoIndexed(photoId, timestamp)
     }
 
+    override suspend fun markAllIndexed(photoIds: List<String>, timestamp: Long) {
+        photoDao.markPhotosIndexed(photoIds, timestamp)
+    }
+
     override suspend fun getById(photoId: String): Photo? =
         photoDao.getPhotoById(photoId)?.toDomain()
 

@@ -24,4 +24,11 @@ interface PhotoDao {
 
     @Query("SELECT * FROM photos WHERE id IN (:ids)")
     suspend fun getByIds(ids: List<String>): List<PhotoEntity>
+
+    /**
+     * Marks a batch of photos as indexed in a single SQL statement, replacing the N individual
+     * UPDATE calls that would otherwise happen per photo during indexing.
+     */
+    @Query("UPDATE photos SET lastIndexedAt = :timestamp WHERE id IN (:photoIds)")
+    suspend fun markPhotosIndexed(photoIds: List<String>, timestamp: Long)
 }

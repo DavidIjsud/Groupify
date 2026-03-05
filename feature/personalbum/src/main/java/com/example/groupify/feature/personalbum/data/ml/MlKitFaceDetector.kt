@@ -2,11 +2,10 @@
 package com.example.groupify.feature.personalbum.data.ml
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
-import androidx.exifinterface.media.ExifInterface
+import android.os.SystemClock
+import android.util.Log
+import com.example.groupify.feature.personalbum.BuildConfig
 import com.example.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
 import com.example.groupify.feature.personalbum.domain.model.DetectedFace
@@ -35,56 +34,57 @@ class MlKitFaceDetector @Inject constructor(
     private val detector = FaceDetection.getClient(options)
 
     override suspend fun detectFaces(photoUri: String): List<DetectedFace> {
-        val image = withContext(Dispatchers.IO) {
-            val uri = Uri.parse(photoUri)
+        // Decode a bounded, EXIF-rotated bitmap on IO, then hand it to ML Kit.
+        // Using BitmapDecodeUtils (max 1024 px) avoids loading full-resolution images —
+        // e.g. a 12MP photo drops from ~48 MB to ~3 MB for detection.
+        //
+        // ML Kit returns bounding boxes in the coordinate space of the bitmap it receives.
+        // We scale them back up by sampleSize so callers (e.g. TFLiteFaceNetEmbedder) always
+        // see bboxes in full-resolution coordinates, preserving the existing contract.
+        val tDecode = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
 
-            val decoded = context.contentResolver.openInputStream(uri).use { stream ->
-                checkNotNull(stream) { "Cannot open stream for $photoUri" }
-                BitmapFactory.decodeStream(stream)
-            }
-
-            val rotationDegrees = context.contentResolver.openInputStream(uri).use { stream ->
-                checkNotNull(stream) { "Cannot open stream for EXIF at $photoUri" }
-                val exif = ExifInterface(stream)
-                when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                    else -> 0f
-                }
-            }
-
-            val rotated = if (rotationDegrees != 0f) {
-                val matrix = Matrix().apply { postRotate(rotationDegrees) }
-                Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-                    .also { if (it !== decoded) decoded.recycle() }
-            } else {
-                decoded
-            }
-
-            val argb = if (rotated.config == Bitmap.Config.ARGB_8888) {
-                rotated
-            } else {
-                rotated.copy(Bitmap.Config.ARGB_8888, false).also { rotated.recycle() }
-            }
-
-            InputImage.fromBitmap(argb, 0)
+        val (sampledBitmap, sampleSize) = withContext(Dispatchers.IO) {
+            BitmapDecodeUtils.decodeSampledAndRotatedBitmap(
+                context,
+                Uri.parse(photoUri),
+                MAX_DECODE_DIMENSION,
+            )
         }
 
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "detect/decode in ${SystemClock.elapsedRealtime() - tDecode}ms — " +
+                "${sampledBitmap.width}x${sampledBitmap.height} sampleSize=$sampleSize")
+        }
+
+        val image = InputImage.fromBitmap(sampledBitmap, 0)
+
+        val tDetect = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
+
         return suspendCancellableCoroutine { continuation ->
-            continuation.invokeOnCancellation { /* ML Kit task cannot be cancelled; isActive guards below prevent resume */ }
+            continuation.invokeOnCancellation { /* ML Kit task cannot be cancelled; isActive guards resume */ }
 
             detector.process(image)
                 .addOnSuccessListener { mlFaces ->
+                    // Recycle the sampled bitmap now that ML Kit has finished reading it.
+                    sampledBitmap.recycle()
+
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "ML Kit detection in ${SystemClock.elapsedRealtime() - tDetect}ms, " +
+                            "found ${mlFaces.size} face(s)")
+                    }
+
                     if (continuation.isActive) {
                         val result = mlFaces.map { face ->
                             val rect = face.boundingBox
+                            // Scale bbox coordinates back to the full-resolution space so that
+                            // downstream consumers (embedder) can use them without knowing the
+                            // sample size that was applied here.
                             DetectedFace(
                                 boundingBox = BoundingBox(
-                                    left = rect.left.toFloat(),
-                                    top = rect.top.toFloat(),
-                                    right = rect.right.toFloat(),
-                                    bottom = rect.bottom.toFloat(),
+                                    left = rect.left.toFloat() * sampleSize,
+                                    top = rect.top.toFloat() * sampleSize,
+                                    right = rect.right.toFloat() * sampleSize,
+                                    bottom = rect.bottom.toFloat() * sampleSize,
                                 ),
                                 trackingId = face.trackingId,
                                 smilingProbability = face.smilingProbability,
@@ -96,10 +96,19 @@ class MlKitFaceDetector @Inject constructor(
                     }
                 }
                 .addOnFailureListener { e ->
+                    sampledBitmap.recycle()
                     if (continuation.isActive) {
                         continuation.resumeWithException(e)
                     }
                 }
         }
+    }
+
+    companion object {
+        private const val TAG = "MlKitFaceDetector"
+
+        // Match the embedder's MAX_DECODE_DIMENSION so the round-trip (scale up in detector,
+        // scale down in embedder) uses the same sampleSize for both passes.
+        private const val MAX_DECODE_DIMENSION = 1024
     }
 }

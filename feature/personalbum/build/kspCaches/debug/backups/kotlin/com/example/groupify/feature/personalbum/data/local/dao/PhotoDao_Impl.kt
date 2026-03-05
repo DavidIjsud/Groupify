@@ -184,6 +184,32 @@ public class PhotoDao_Impl(
     }
   }
 
+  public override suspend fun markPhotosIndexed(photoIds: List<String>, timestamp: Long) {
+    val _stringBuilder: StringBuilder = StringBuilder()
+    _stringBuilder.append("UPDATE photos SET lastIndexedAt = ")
+    _stringBuilder.append("?")
+    _stringBuilder.append(" WHERE id IN (")
+    val _inputSize: Int = photoIds.size
+    appendPlaceholders(_stringBuilder, _inputSize)
+    _stringBuilder.append(")")
+    val _sql: String = _stringBuilder.toString()
+    return performSuspending(__db, false, true) { _connection ->
+      val _stmt: SQLiteStatement = _connection.prepare(_sql)
+      try {
+        var _argIndex: Int = 1
+        _stmt.bindLong(_argIndex, timestamp)
+        _argIndex = 2
+        for (_item: String in photoIds) {
+          _stmt.bindText(_argIndex, _item)
+          _argIndex++
+        }
+        _stmt.step()
+      } finally {
+        _stmt.close()
+      }
+    }
+  }
+
   public companion object {
     public fun getRequiredConverters(): List<KClass<*>> = emptyList()
   }

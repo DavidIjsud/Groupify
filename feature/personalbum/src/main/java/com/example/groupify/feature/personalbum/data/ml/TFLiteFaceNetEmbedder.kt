@@ -3,11 +3,11 @@ package com.example.groupify.feature.personalbum.data.ml
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
-import androidx.exifinterface.media.ExifInterface
+import android.os.SystemClock
+import android.util.Log
+import com.example.groupify.feature.personalbum.BuildConfig
 import com.example.groupify.feature.personalbum.domain.model.BoundingBox
 import com.example.groupify.feature.personalbum.domain.recognition.FaceEmbedder
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,17 +21,38 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import javax.inject.Inject
+import kotlin.math.min
 import kotlin.math.sqrt
 
 class TFLiteFaceNetEmbedder @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : FaceEmbedder {
 
+    // Serializes TFLite inference — the Interpreter is not thread-safe.
     private val inferenceMutex = Mutex()
 
+    // Optimization (2): configure TFLite to use multiple threads.
+    // min(4, availableProcessors) keeps it predictable on mid-range devices;
+    // coerceAtLeast(2) ensures at least two threads on any device that has them.
     private val interpreter: Interpreter by lazy {
-        Interpreter(loadModelBuffer())
+        val threadCount = min(4, Runtime.getRuntime().availableProcessors()).coerceAtLeast(2)
+        val opts = Interpreter.Options().apply { setNumThreads(threadCount) }
+        if (BuildConfig.DEBUG) Log.d(TAG, "TFLite interpreter created with $threadCount thread(s)")
+        Interpreter(loadModelBuffer(), opts)
     }
+
+    // Optimization (1): per-photo bitmap cache.
+    // During sequential indexing all faces in the same photo call embedFace() with the same URI.
+    // Caching the decoded+rotated bitmap avoids re-opening, re-decoding, and re-rotating it for
+    // every face.  The cache holds exactly one entry (the last URI processed).
+    //
+    // Thread-safety note: during indexing the use case calls embedFace() sequentially on a single
+    // coroutine, so there is no concurrent access.  The decodeMutex is a safety net for any
+    // future parallel use.
+    private val decodeMutex = Mutex()
+    private var cachedUri: String? = null
+    private var cachedBitmap: Bitmap? = null
+    private var cachedSampleSize: Int = 1
 
     private fun loadModelBuffer(): ByteBuffer {
         val assetFd = context.assets.openFd(MODEL_FILENAME)
@@ -47,150 +68,108 @@ class TFLiteFaceNetEmbedder @Inject constructor(
     }
 
     override suspend fun embedFace(photoUri: String, faceBoundingBox: BoundingBox): FloatArray {
-        // Decode, downsample, and EXIF-rotate on IO dispatcher.
-        // The returned bitmap is in the same coordinate space as the bounding boxes produced
-        // by MlKitFaceDetector (which also applies EXIF rotation before running detection).
+        // Step 1 — obtain the sampled+rotated source bitmap (cache hit = no IO).
         val (sourceBitmap, sampleSize) = withContext(Dispatchers.IO) {
-            decodeSampledAndRotatedBitmap(photoUri)
+            getOrDecodeBitmap(photoUri)
         }
 
         return withContext(Dispatchers.Default) {
-            // Guard against HARDWARE config (API 26+; should not occur after our decode, but be safe).
-            // Bitmap.Config.HARDWARE only exists on API 26+, so it must be guarded to satisfy minSdk 24.
-            val softBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            // Guard against HARDWARE config (API 26+); should not occur after our decode, but be safe.
+            val softBitmap: Bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                 sourceBitmap.config == Bitmap.Config.HARDWARE
             ) {
-                sourceBitmap.copy(Bitmap.Config.ARGB_8888, false).also { sourceBitmap.recycle() }
+                sourceBitmap.copy(Bitmap.Config.ARGB_8888, false)
+                // Note: do NOT recycle sourceBitmap here — it's held in the cache.
             } else {
                 sourceBitmap
             }
-            try {
-                // Scale bounding box coordinates to match the downsampled, rotated bitmap.
-                // Bbox coords are in the rotated-full-resolution space; dividing by sampleSize
-                // maps them into the downsampled-rotated space — matching both axes correctly.
-                val scaledLeft = (faceBoundingBox.left / sampleSize).toInt()
-                    .coerceIn(0, softBitmap.width - 1)
-                val scaledTop = (faceBoundingBox.top / sampleSize).toInt()
-                    .coerceIn(0, softBitmap.height - 1)
-                val scaledRight = (faceBoundingBox.right / sampleSize).toInt()
-                    .coerceIn(scaledLeft + 1, softBitmap.width)
-                val scaledBottom = (faceBoundingBox.bottom / sampleSize).toInt()
-                    .coerceIn(scaledTop + 1, softBitmap.height)
 
-                val cropWidth = scaledRight - scaledLeft
-                val cropHeight = scaledBottom - scaledTop
+            // Step 2 — map full-res bbox coordinates into the sampled bitmap space.
+            // Bboxes from MlKitFaceDetector are scaled to full-res; dividing by sampleSize
+            // maps them back into the downsampled pixel coordinate space used here.
+            val scaledLeft = (faceBoundingBox.left / sampleSize).toInt().coerceIn(0, softBitmap.width - 1)
+            val scaledTop = (faceBoundingBox.top / sampleSize).toInt().coerceIn(0, softBitmap.height - 1)
+            val scaledRight = (faceBoundingBox.right / sampleSize).toInt().coerceIn(scaledLeft + 1, softBitmap.width)
+            val scaledBottom = (faceBoundingBox.bottom / sampleSize).toInt().coerceIn(scaledTop + 1, softBitmap.height)
 
-                // Reject crops that are too small to produce meaningful embeddings.
-                if (cropWidth < MIN_CROP_SIZE || cropHeight < MIN_CROP_SIZE) {
-                    throw IllegalStateException(
-                        "Face crop too small (${cropWidth}x${cropHeight}); bounding box may be misaligned.",
-                    )
-                }
+            val cropWidth = scaledRight - scaledLeft
+            val cropHeight = scaledBottom - scaledTop
 
-                val cropped = Bitmap.createBitmap(
-                    softBitmap,
-                    scaledLeft,
-                    scaledTop,
-                    cropWidth,
-                    cropHeight,
+            if (cropWidth < MIN_CROP_SIZE || cropHeight < MIN_CROP_SIZE) {
+                throw IllegalStateException(
+                    "Face crop too small (${cropWidth}x${cropHeight}); bounding box may be misaligned.",
                 )
-                val resized = Bitmap.createScaledBitmap(cropped, INPUT_SIZE, INPUT_SIZE, true)
-                cropped.recycle()
-
-                val inputBuffer = bitmapToInputBuffer(resized)
-                resized.recycle()
-
-                val raw = inferenceMutex.withLock {
-                    val outputShape = interpreter.getOutputTensor(0).shape()
-                    val outputSize = when {
-                        outputShape.size == 2 && outputShape[0] == 1 -> outputShape[1]
-                        outputShape.size == 1 -> outputShape[0]
-                        else -> throw IllegalStateException(
-                            "Unexpected output tensor shape: ${outputShape.toList()}",
-                        )
-                    }
-                    val outputBuffer = Array(1) { FloatArray(outputSize) }
-                    interpreter.run(inputBuffer, outputBuffer)
-                    outputBuffer[0]
-                }
-
-                // L2-normalize so downstream cosine similarity == dot product on unit vectors.
-                l2Normalize(raw)
-            } finally {
-                softBitmap.recycle()
             }
+
+            // Step 3 — crop, resize to 160×160, run inference.
+            val cropped = Bitmap.createBitmap(softBitmap, scaledLeft, scaledTop, cropWidth, cropHeight)
+            val resized = Bitmap.createScaledBitmap(cropped, INPUT_SIZE, INPUT_SIZE, true)
+            cropped.recycle()
+
+            val inputBuffer = bitmapToInputBuffer(resized)
+            resized.recycle()
+
+            val tInfer = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
+
+            val raw = inferenceMutex.withLock {
+                val outputShape = interpreter.getOutputTensor(0).shape()
+                val outputSize = when {
+                    outputShape.size == 2 && outputShape[0] == 1 -> outputShape[1]
+                    outputShape.size == 1 -> outputShape[0]
+                    else -> throw IllegalStateException("Unexpected output tensor shape: ${outputShape.toList()}")
+                }
+                val outputBuffer = Array(1) { FloatArray(outputSize) }
+                interpreter.run(inputBuffer, outputBuffer)
+                outputBuffer[0]
+            }
+
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "TFLite inference in ${SystemClock.elapsedRealtime() - tInfer}ms")
+            }
+
+            // Recycle the HARDWARE-copy if we made one.
+            if (softBitmap !== sourceBitmap) softBitmap.recycle()
+
+            l2Normalize(raw)
         }
     }
 
     /**
-     * Two-pass decode (inSampleSize bounds memory) followed by EXIF rotation.
+     * Returns the cached (bitmap, sampleSize) for [photoUri], decoding on cache miss.
      *
-     * This mirrors the decode + rotate sequence in [MlKitFaceDetector] so the resulting bitmap
-     * shares the same pixel coordinate space as the bounding boxes ML Kit produced.
+     * The old cached bitmap is recycled when the URI changes, so memory stays bounded to
+     * a single decoded image at a time.
      *
-     * Returns the ARGB_8888 rotated bitmap and the sample size used (needed to scale bboxes).
+     * Must be called on a dispatcher that allows IO (called inside withContext(Dispatchers.IO)).
      */
-    private fun decodeSampledAndRotatedBitmap(photoUri: String): Pair<Bitmap, Int> {
-        val uri = Uri.parse(photoUri)
+    private suspend fun getOrDecodeBitmap(photoUri: String): Pair<Bitmap, Int> =
+        decodeMutex.withLock {
+            if (cachedUri == photoUri && cachedBitmap?.isRecycled == false) {
+                // Cache hit — same photo, reuse the already-decoded bitmap.
+                cachedBitmap!! to cachedSampleSize
+            } else {
+                // Cache miss — recycle stale entry and decode fresh.
+                cachedBitmap?.recycle()
 
-        // Pass 1 — read dimensions only.
-        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, boundsOptions)
-        }
+                val tDecode = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
 
-        val sampleSize = calculateInSampleSize(
-            boundsOptions.outWidth,
-            boundsOptions.outHeight,
-            MAX_DECODE_DIMENSION,
-        )
+                val (bitmap, sampleSize) = BitmapDecodeUtils.decodeSampledAndRotatedBitmap(
+                    context,
+                    Uri.parse(photoUri),
+                    MAX_DECODE_DIMENSION,
+                )
 
-        // Pass 2 — decode at the computed sample size.
-        val decodeOptions = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-        val decoded = context.contentResolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, decodeOptions)
-        } ?: throw IllegalStateException("Cannot decode bitmap from $photoUri")
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "embedder decode+rotate ${bitmap.width}x${bitmap.height} " +
+                        "sampleSize=$sampleSize in ${SystemClock.elapsedRealtime() - tDecode}ms (cache miss)")
+                }
 
-        // Pass 3 — read EXIF orientation (same mapping as MlKitFaceDetector).
-        val rotationDegrees = context.contentResolver.openInputStream(uri)?.use { stream ->
-            val exif = ExifInterface(stream)
-            when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                else -> 0f
+                cachedUri = photoUri
+                cachedBitmap = bitmap
+                cachedSampleSize = sampleSize
+                bitmap to sampleSize
             }
-        } ?: 0f
-
-        // Apply rotation (if any), recycling the pre-rotation bitmap when a new one is made.
-        val rotated = if (rotationDegrees != 0f) {
-            val matrix = Matrix().apply { postRotate(rotationDegrees) }
-            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, matrix, true)
-                .also { if (it !== decoded) decoded.recycle() }
-        } else {
-            decoded
         }
-
-        // Guarantee ARGB_8888 (rotation might produce a different config on some devices).
-        val argb = if (rotated.config != Bitmap.Config.ARGB_8888) {
-            rotated.copy(Bitmap.Config.ARGB_8888, false).also { rotated.recycle() }
-        } else {
-            rotated
-        }
-
-        return argb to sampleSize
-    }
-
-    private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
-        var sampleSize = 1
-        while (maxOf(width / sampleSize, height / sampleSize) > maxDimension) {
-            sampleSize *= 2
-        }
-        return sampleSize
-    }
 
     private fun bitmapToInputBuffer(bitmap: Bitmap): ByteBuffer {
         val buffer = ByteBuffer.allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * FLOAT_BYTES)
@@ -208,10 +187,8 @@ class TFLiteFaceNetEmbedder @Inject constructor(
     }
 
     /**
-     * L2-normalizes [v] in-place equivalent, returning a new array on the unit hypersphere.
-     * Cosine similarity on unit vectors equals their dot product, and FaceNet embeddings are
-     * conventionally used this way. If the norm is essentially zero, the original is returned
-     * unchanged to avoid division-by-zero.
+     * L2-normalises [v] so downstream cosine similarity equals the dot product.
+     * Returns [v] unchanged if the norm is effectively zero to avoid division by zero.
      */
     private fun l2Normalize(v: FloatArray): FloatArray {
         var normSq = 0f
@@ -222,6 +199,7 @@ class TFLiteFaceNetEmbedder @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "TFLiteFaceNetEmbedder"
         private const val MODEL_FILENAME = "facenet.tflite"
         private const val INPUT_SIZE = 160
         private const val FLOAT_BYTES = 4
