@@ -54,6 +54,14 @@ dependencies {
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    // WorkManager — required in the app module so that:
+    //   1. androidx.work.impl.foreground.SystemForegroundService resolves in AndroidManifest.xml
+    //   2. androidx.startup.InitializationProvider resolves in AndroidManifest.xml
+    //      (startup-runtime is a transitive dep of work-runtime-ktx)
+    //   3. HiltWorkerFactory compiles in GroupifyApp.kt
+    // The feature module's `implementation` scope does NOT expose these to the app module.
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
     // Feature modules
     implementation(project(":feature:personalbum"))
     testImplementation(libs.junit)
