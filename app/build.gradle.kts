@@ -7,15 +7,15 @@ plugins {
 }
 
 android {
-    namespace = "com.example.groupify"
+    namespace = "com.palmyrasoft.groupify"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.groupify"
+        applicationId = "com.palmyrasoft.groupify"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     // Splash screen
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.core:core-splashscreen:1.2.0")
     // Feature modules
     implementation(project(":feature:personalbum"))
     testImplementation(libs.junit)
