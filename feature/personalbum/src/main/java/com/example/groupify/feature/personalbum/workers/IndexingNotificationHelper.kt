@@ -33,15 +33,20 @@ class IndexingNotificationHelper @Inject constructor(
     }
 
     private fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_LOW, // silent — no sound/vibration for progress updates
-        ).apply {
-            description = "Shows progress while Groupify indexes photos for face recognition."
-            setShowBadge(false)
+        // NotificationChannel and all channel-specific APIs require API 26+.
+        // On API 24-25 channels are ignored by the OS; NotificationCompat handles
+        // the fallback automatically, so no channel setup is needed there.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_LOW, // silent — no sound/vibration for progress updates
+            ).apply {
+                description = "Shows progress while Groupify indexes photos for face recognition."
+                setShowBadge(false)
+            }
+            notificationManager.createNotificationChannel(channel)
         }
-        notificationManager.createNotificationChannel(channel)
     }
 
     /**
