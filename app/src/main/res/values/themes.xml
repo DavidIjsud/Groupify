@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Groupify" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+        Splash screen theme applied to MainActivity.
+        The system shows this theme from cold-start until the first frame is drawn.
+        postSplashScreenTheme hands off to Theme.Groupify after installSplashScreen() exits.
+    -->
+    <style name="Theme.Groupify.Splash" parent="Theme.SplashScreen">
+        <!-- Dark canvas matching the app's background -->
+        <item name="windowSplashScreenBackground">#0E0E0E</item>
+        <!-- Centered logo — place groupify_splash_logo.png in drawable-nodpi/ -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/groupify_splash_logo</item>
+        <!--
+            On Android 12+ the icon is rendered inside an adaptive-icon circle.
+            Setting this to the same dark colour makes the circle invisible so the
+            logo appears directly on the background with no badge or ring.
+        -->
+        <item name="windowSplashScreenIconBackgroundColor">#0E0E0E</item>
+        <!-- Theme applied to the activity once the splash is dismissed -->
+        <item name="postSplashScreenTheme">@style/Theme.Groupify</item>
+    </style>
 </resources>

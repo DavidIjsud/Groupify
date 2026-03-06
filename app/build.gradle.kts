@@ -62,6 +62,8 @@ dependencies {
     // The feature module's `implementation` scope does NOT expose these to the app module.
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
+    // Splash screen
+    implementation("androidx.core:core-splashscreen:1.0.1")
     // Feature modules
     implementation(project(":feature:personalbum"))
     testImplementation(libs.junit)
