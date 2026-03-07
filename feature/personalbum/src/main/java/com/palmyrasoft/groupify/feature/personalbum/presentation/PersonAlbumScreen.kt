@@ -47,8 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -82,8 +80,6 @@ import coil.compose.AsyncImagePainter
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.MatchUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
 import java.io.File
-import kotlin.math.roundToInt
-
 private val AccentPurple = Color(0xFF7B61FF)
 private val DarkBackground = Color(0xFF0E0E0E)
 private val CardBackground = Color(0xFF1C1C1E)
@@ -230,16 +226,6 @@ fun PersonAlbumScreen(
                         onToggle = { id -> viewModel.onEvent(PersonAlbumContract.UiEvent.ToggleFaceSelection(id)) },
                         onSelectAll = { viewModel.onEvent(PersonAlbumContract.UiEvent.SelectAllFaces) },
                         onClear = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearFaceSelection) },
-                    )
-                }
-            }
-
-            // Match sensitivity slider — shown once a query photo is selected
-            if (uiState.selectedQueryPhotoUri != null) {
-                item {
-                    SensitivitySlider(
-                        percent = uiState.matchSensitivityPercent,
-                        onValueChange = { viewModel.onEvent(PersonAlbumContract.UiEvent.SetMatchSensitivity(it)) },
                     )
                 }
             }
@@ -728,62 +714,6 @@ private fun FaceChip(
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = if (face.isSelected) FontWeight.SemiBold else FontWeight.Normal,
             )
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Match sensitivity slider
-// ---------------------------------------------------------------------------
-
-@Composable
-private fun SensitivitySlider(
-    percent: Int,
-    onValueChange: (Int) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CardBackground)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.photomatch_match_sensitivity),
-                color = Color.White,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = stringResource(R.string.photomatch_percent_format, percent),
-                color = AccentPurple,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        Slider(
-            value = percent.toFloat(),
-            onValueChange = { onValueChange(it.roundToInt()) },
-            valueRange = 60f..95f,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentPurple,
-                activeTrackColor = AccentPurple,
-                inactiveTrackColor = Color(0xFF3D3D3D),
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(text = stringResource(R.string.photomatch_sensitivity_min), color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-            Text(text = stringResource(R.string.photomatch_sensitivity_max), color = TextSecondary, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

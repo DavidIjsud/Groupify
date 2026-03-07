@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val DEFAULT_MATCH_THRESHOLD = 0.60f
+
 @HiltViewModel
 class PersonAlbumViewModel @Inject constructor(
     private val workManager: WorkManager,
@@ -51,7 +53,6 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.ToggleFaceSelection -> onToggleFaceSelection(event.faceId)
             is PersonAlbumContract.UiEvent.SelectAllFaces -> onSelectAllFaces()
             is PersonAlbumContract.UiEvent.ClearFaceSelection -> onClearFaceSelection()
-            is PersonAlbumContract.UiEvent.SetMatchSensitivity -> onSetMatchSensitivity(event.percent)
         }
     }
 
@@ -137,10 +138,6 @@ class PersonAlbumViewModel @Inject constructor(
         }
     }
 
-    private fun onSetMatchSensitivity(percent: Int) {
-        _uiState.update { it.copy(matchSensitivityPercent = percent.coerceIn(60, 95)) }
-    }
-
     private fun onStartDetection() {
         val queryUri = _uiState.value.selectedQueryPhotoUri ?: return
         val selectedFaces = _uiState.value.queryFaces.filter { it.isSelected }
@@ -171,7 +168,7 @@ class PersonAlbumViewModel @Inject constructor(
 
                 // Run face search with selected bounding boxes and sensitivity threshold.
                 _uiState.update { it.copy(isDetecting = true, matches = emptyList()) }
-                val threshold = _uiState.value.matchSensitivityPercent / 100f
+                val threshold = DEFAULT_MATCH_THRESHOLD
                 val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
                 val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)
                 val matchUiModels = results.map { match ->

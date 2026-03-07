@@ -16,7 +16,6 @@ object PersonAlbumContract {
         // Multi-face query
         val queryFaces: List<QueryFaceUiModel> = emptyList(),
         val focusedFaceId: Int? = null,
-        val matchSensitivityPercent: Int = 82,
         val isFaceLoading: Boolean = false,
     )
 
@@ -29,7 +28,6 @@ object PersonAlbumContract {
         data class ToggleFaceSelection(val faceId: Int) : UiEvent
         data object SelectAllFaces : UiEvent
         data object ClearFaceSelection : UiEvent
-        data class SetMatchSensitivity(val percent: Int) : UiEvent
     }
 
     sealed interface UiEffect {
