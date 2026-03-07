@@ -4,7 +4,7 @@
     "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "com.example.groupify.feature.personalbum",
+  "applicationId": "com.palmyrasoft.groupify.feature.personalbum",
   "variantName": "release",
   "elements": [
     {

@@ -6,13 +6,13 @@
         severity="fatal"
         message="Missing dataSync foregroundServiceType in the AndroidManifest.xml">
         <location
-            file="${:feature:personalbum*release*MAIN*sourceProvider*0*javaDir*0}/com/example/groupify/feature/personalbum/workers/IndexFacesWorker.kt"
+            file="${:feature:personalbum*release*MAIN*sourceProvider*0*javaDir*0}/com/palmyrasoft/groupify/feature/personalbum/workers/IndexFacesWorker.kt"
             line="79"
             column="13"
-            startOffset="3442"
+            startOffset="3450"
             endLine="83"
             endColumn="14"
-            endOffset="3633"/>
+            endOffset="3641"/>
     </incident>
 
 </incidents>

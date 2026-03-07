@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.groupify.feature.personalbum"
+    namespace = "com.palmyrasoft.groupify.feature.personalbum"
     compileSdk = 36
 
     defaultConfig {

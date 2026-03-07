@@ -1,4 +1,4 @@
-com.example.groupify.feature.personalbum
+com.palmyrasoft.groupify.feature.personalbum
 plurals photomatch_faces_selected
 plurals photomatch_matches_found
 string photomatch_app_title
