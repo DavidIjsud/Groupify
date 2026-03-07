@@ -184,10 +184,20 @@ class PersonAlbumViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Auto-index if the face DB is empty.
-                // The worker runs as a foreground service and survives the app going to background.
+                // Wait for any in-flight indexing before searching:
+                //  • First launch  → face DB is empty, must index everything.
+                //  • New photos detected → MediaStoreObserver or GroupifyApp.onCreate already
+                //    enqueued IndexFacesWorker; we wait so the search includes the new photos.
+                //  • Normal launch, nothing new → worker is not active, skip straight to search.
                 val storedFaces = faceIndexRepository.getAllFaces().first()
-                if (storedFaces.isEmpty()) {
+                val activeWork = workManager
+                    .getWorkInfosForUniqueWorkFlow(IndexFacesWorker.WORK_NAME)
+                    .first()
+                val isIndexing = activeWork.any {
+                    it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+                }
+
+                if (storedFaces.isEmpty() || isIndexing) {
                     _uiState.update {
                         it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
                     }

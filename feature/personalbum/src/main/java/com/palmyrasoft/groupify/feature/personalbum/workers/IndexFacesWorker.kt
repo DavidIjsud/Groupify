@@ -6,7 +6,10 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
@@ -93,5 +96,16 @@ class IndexFacesWorker @AssistedInject constructor(
         const val WORK_NAME = "face_indexing"
         const val KEY_PROCESSED = "processed"
         const val KEY_TOTAL = "total"
+
+        /**
+         * Enqueues a one-time indexing run with [ExistingWorkPolicy.KEEP], so a worker
+         * that is already running or enqueued is never duplicated.
+         *
+         * Safe to call from [MediaStoreObserver], [GroupifyApp.onCreate], or any ViewModel.
+         */
+        fun enqueueOneTime(workManager: WorkManager) {
+            val request = OneTimeWorkRequestBuilder<IndexFacesWorker>().build()
+            workManager.enqueueUniqueWork(WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        }
     }
 }
