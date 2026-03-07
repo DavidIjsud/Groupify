@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -179,12 +180,29 @@ fun PersonAlbumScreen(
 
     val busy = uiState.isPreparingGallery || uiState.isDetecting
 
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to the results header when matches arrive.
+    // Index is computed from the same conditional items that precede it in the LazyColumn.
+    LaunchedEffect(uiState.matches) {
+        if (uiState.matches.isEmpty()) return@LaunchedEffect
+        var targetIndex = 3 // Spacer(0) + Header(1) + QueryPhotoCard(2)
+        if (uiState.queryFaces.isNotEmpty()) targetIndex++ // FaceSelectionSection
+        targetIndex++ // Camera button
+        if (uiState.userMessage != null) targetIndex++ // error row
+        if (uiState.isPreparingGallery) targetIndex++ // progress indicator
+        targetIndex++ // Start Detection button
+        // targetIndex now points to the "N matches found" header item
+        listState.animateScrollToItem(targetIndex)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground),
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp),
