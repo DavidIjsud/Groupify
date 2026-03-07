@@ -10,9 +10,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -399,23 +401,57 @@ fun PersonAlbumScreen(
             if (uiState.matches.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) }) {
-                            Icon(
-                                imageVector = Icons.Filled.Share,
-                                contentDescription = stringResource(R.string.photomatch_btn_share_matches),
-                                tint = AccentPurple,
+                    if (uiState.matchSelectionMode) {
+                        // Selection action bar
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "${uiState.selectedMatchUris.size} selected",
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
                             )
+                            IconButton(
+                                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareSelectedMatches) },
+                                enabled = uiState.selectedMatchUris.isNotEmpty(),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
+                                    tint = if (uiState.selectedMatchUris.isNotEmpty()) AccentPurple else TextSecondary,
+                                )
+                            }
+                            IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearMatchSelection) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Clear,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                )
+                            }
+                        }
+                    } else {
+                        // Normal results header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                            )
+                            IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
+                                    tint = AccentPurple,
+                                )
+                            }
                         }
                     }
                 }
@@ -426,7 +462,14 @@ fun PersonAlbumScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         rowItems.forEach { match ->
-                            MatchCard(match = match, modifier = Modifier.weight(1f))
+                            MatchCard(
+                                match = match,
+                                isSelected = match.uri in uiState.selectedMatchUris,
+                                isSelectionMode = uiState.matchSelectionMode,
+                                onTap = { viewModel.onEvent(PersonAlbumContract.UiEvent.TapMatch(match.uri)) },
+                                onLongPress = { viewModel.onEvent(PersonAlbumContract.UiEvent.LongPressMatch(match.uri)) },
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                         if (rowItems.size == 1) {
                             Box(modifier = Modifier.weight(1f))
@@ -435,21 +478,6 @@ fun PersonAlbumScreen(
                 }
 
                 item {
-                    OutlinedButton(
-                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, AccentPurple),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentPurple),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Share,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.photomatch_btn_share_matches))
-                    }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
@@ -753,15 +781,21 @@ private fun FaceChip(
 // Match result card
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MatchCard(
     match: MatchUiModel,
+    isSelected: Boolean,
+    isSelectionMode: Boolean,
+    onTap: () -> Unit,
+    onLongPress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(12.dp)),
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(onClick = onTap, onLongClick = onLongPress),
     ) {
         AsyncImage(
             model = Uri.parse(match.uri),
@@ -769,6 +803,7 @@ private fun MatchCard(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
+        // Score badge (always visible)
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -783,6 +818,29 @@ private fun MatchCard(
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
             )
+        }
+        // Selection overlay
+        if (isSelectionMode) {
+            val overlayColor = if (isSelected) Color(0x667B61FF) else Color(0x44000000)
+            Box(modifier = Modifier.fillMaxSize().background(overlayColor))
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                        .clip(CircleShape)
+                        .background(AccentPurple),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
         }
     }
 }

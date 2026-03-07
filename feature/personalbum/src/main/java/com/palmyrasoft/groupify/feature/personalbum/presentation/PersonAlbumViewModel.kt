@@ -53,6 +53,10 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.ToggleFaceSelection -> onToggleFaceSelection(event.faceId)
             is PersonAlbumContract.UiEvent.SelectAllFaces -> onSelectAllFaces()
             is PersonAlbumContract.UiEvent.ClearFaceSelection -> onClearFaceSelection()
+            is PersonAlbumContract.UiEvent.LongPressMatch -> onLongPressMatch(event.uri)
+            is PersonAlbumContract.UiEvent.TapMatch -> onTapMatch(event.uri)
+            is PersonAlbumContract.UiEvent.ClearMatchSelection -> onClearMatchSelection()
+            is PersonAlbumContract.UiEvent.ShareSelectedMatches -> onShareSelectedMatches()
         }
     }
 
@@ -69,6 +73,8 @@ class PersonAlbumViewModel @Inject constructor(
                 queryFaces = emptyList(),
                 focusedFaceId = null,
                 isFaceLoading = true,
+                matchSelectionMode = false,
+                selectedMatchUris = emptySet(),
             )
         }
         detectQueryFaces(uri)
@@ -138,6 +144,35 @@ class PersonAlbumViewModel @Inject constructor(
         }
     }
 
+    private fun onLongPressMatch(uri: String) {
+        _uiState.update { it.copy(matchSelectionMode = true, selectedMatchUris = it.selectedMatchUris + uri) }
+    }
+
+    private fun onTapMatch(uri: String) {
+        _uiState.update { state ->
+            if (!state.matchSelectionMode) return@update state
+            val updated = if (uri in state.selectedMatchUris) state.selectedMatchUris - uri
+                          else state.selectedMatchUris + uri
+            state.copy(
+                selectedMatchUris = updated,
+                matchSelectionMode = updated.isNotEmpty(),
+            )
+        }
+    }
+
+    private fun onClearMatchSelection() {
+        _uiState.update { it.copy(matchSelectionMode = false, selectedMatchUris = emptySet()) }
+    }
+
+    private fun onShareSelectedMatches() {
+        viewModelScope.launch {
+            val uris = _uiState.value.selectedMatchUris.toList()
+            if (uris.isEmpty()) return@launch
+            _uiEffect.emit(PersonAlbumContract.UiEffect.ShareUris(uris))
+            _uiState.update { it.copy(matchSelectionMode = false, selectedMatchUris = emptySet()) }
+        }
+    }
+
     private fun onStartDetection() {
         val queryUri = _uiState.value.selectedQueryPhotoUri ?: return
         val selectedFaces = _uiState.value.queryFaces.filter { it.isSelected }
@@ -167,7 +202,7 @@ class PersonAlbumViewModel @Inject constructor(
                 }
 
                 // Run face search with selected bounding boxes and sensitivity threshold.
-                _uiState.update { it.copy(isDetecting = true, matches = emptyList()) }
+                _uiState.update { it.copy(isDetecting = true, matches = emptyList(), matchSelectionMode = false, selectedMatchUris = emptySet()) }
                 val threshold = DEFAULT_MATCH_THRESHOLD
                 val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
                 val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)

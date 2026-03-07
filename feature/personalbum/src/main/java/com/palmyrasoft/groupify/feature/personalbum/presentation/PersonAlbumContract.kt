@@ -17,6 +17,9 @@ object PersonAlbumContract {
         val queryFaces: List<QueryFaceUiModel> = emptyList(),
         val focusedFaceId: Int? = null,
         val isFaceLoading: Boolean = false,
+        // Match photo selection
+        val matchSelectionMode: Boolean = false,
+        val selectedMatchUris: Set<String> = emptySet(),
     )
 
     sealed interface UiEvent {
@@ -28,6 +31,11 @@ object PersonAlbumContract {
         data class ToggleFaceSelection(val faceId: Int) : UiEvent
         data object SelectAllFaces : UiEvent
         data object ClearFaceSelection : UiEvent
+        // Match photo selection
+        data class LongPressMatch(val uri: String) : UiEvent
+        data class TapMatch(val uri: String) : UiEvent
+        data object ClearMatchSelection : UiEvent
+        data object ShareSelectedMatches : UiEvent
     }
 
     sealed interface UiEffect {
