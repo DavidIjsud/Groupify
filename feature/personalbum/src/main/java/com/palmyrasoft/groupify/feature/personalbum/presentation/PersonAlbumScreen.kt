@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -434,25 +435,12 @@ fun PersonAlbumScreen(
                         }
                     } else {
                         // Normal results header
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                            )
-                            IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Share,
-                                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
-                                    tint = AccentPurple,
-                                )
-                            }
-                        }
+                        Text(
+                            text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
 
@@ -478,8 +466,24 @@ fun PersonAlbumScreen(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(88.dp))
                 }
+            }
+        }
+
+        if (uiState.matches.isNotEmpty() && !uiState.matchSelectionMode) {
+            FloatingActionButton(
+                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp),
+                containerColor = AccentPurple,
+                contentColor = Color.White,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
+                )
             }
         }
     }
