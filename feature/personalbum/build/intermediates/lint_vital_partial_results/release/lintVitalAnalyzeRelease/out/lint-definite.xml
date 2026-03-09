@@ -7,12 +7,12 @@
         message="Missing dataSync foregroundServiceType in the AndroidManifest.xml">
         <location
             file="${:feature:personalbum*release*MAIN*sourceProvider*0*javaDir*0}/com/palmyrasoft/groupify/feature/personalbum/workers/IndexFacesWorker.kt"
-            line="79"
+            line="82"
             column="13"
-            startOffset="3450"
-            endLine="83"
+            startOffset="3570"
+            endLine="86"
             endColumn="14"
-            endOffset="3641"/>
+            endOffset="3761"/>
     </incident>
 
 </incidents>
