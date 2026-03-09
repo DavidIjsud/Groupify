@@ -13,6 +13,9 @@ int string photomatch_detecting 0x0
 int string photomatch_detecting_faces 0x0
 int string photomatch_indexing_progress 0x0
 int string photomatch_match_sensitivity 0x0
+int string photomatch_onboarding_btn_ok 0x0
+int string photomatch_onboarding_message 0x0
+int string photomatch_onboarding_title 0x0
 int string photomatch_percent_format 0x0
 int string photomatch_preparing_gallery 0x0
 int string photomatch_select_from_gallery 0x0

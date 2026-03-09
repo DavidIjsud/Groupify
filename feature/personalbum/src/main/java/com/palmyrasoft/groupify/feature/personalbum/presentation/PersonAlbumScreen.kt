@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -471,6 +472,12 @@ fun PersonAlbumScreen(
             }
         }
 
+        if (uiState.showIndexingOnboardingDialog) {
+            IndexingOnboardingDialog(
+                onConfirm = { viewModel.onEvent(PersonAlbumContract.UiEvent.ConfirmIndexingOnboarding) },
+            )
+        }
+
         if (uiState.matches.isNotEmpty() && !uiState.matchSelectionMode) {
             FloatingActionButton(
                 onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
@@ -487,6 +494,46 @@ fun PersonAlbumScreen(
             }
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// First-time indexing onboarding dialog
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun IndexingOnboardingDialog(onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = {
+            Text(
+                text = stringResource(R.string.photomatch_onboarding_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.photomatch_onboarding_message),
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentPurple),
+            ) {
+                Text(
+                    text = stringResource(R.string.photomatch_onboarding_btn_ok),
+                    color = Color.White,
+                )
+            }
+        },
+        containerColor = CardBackground,
+        titleContentColor = Color.White,
+        textContentColor = TextSecondary,
+    )
 }
 
 // ---------------------------------------------------------------------------

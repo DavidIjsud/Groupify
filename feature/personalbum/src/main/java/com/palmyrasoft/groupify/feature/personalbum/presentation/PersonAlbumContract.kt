@@ -20,6 +20,8 @@ object PersonAlbumContract {
         // Match photo selection
         val matchSelectionMode: Boolean = false,
         val selectedMatchUris: Set<String> = emptySet(),
+        // First-time indexing onboarding dialog
+        val showIndexingOnboardingDialog: Boolean = false,
     )
 
     sealed interface UiEvent {
@@ -36,6 +38,7 @@ object PersonAlbumContract {
         data class TapMatch(val uri: String) : UiEvent
         data object ClearMatchSelection : UiEvent
         data object ShareSelectedMatches : UiEvent
+        data object ConfirmIndexingOnboarding : UiEvent
     }
 
     sealed interface UiEffect {

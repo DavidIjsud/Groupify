@@ -6,6 +6,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
@@ -36,6 +37,7 @@ class PersonAlbumViewModel @Inject constructor(
     private val detectQueryFacesUseCase: DetectQueryFacesUseCase,
     private val buildQueryFaceThumbnailsUseCase: BuildQueryFaceThumbnailsUseCase,
     private val faceIndexRepository: FaceIndexRepository,
+    private val onboardingPrefs: IndexingOnboardingPrefs,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonAlbumContract.UiState())
@@ -57,6 +59,7 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.TapMatch -> onTapMatch(event.uri)
             is PersonAlbumContract.UiEvent.ClearMatchSelection -> onClearMatchSelection()
             is PersonAlbumContract.UiEvent.ShareSelectedMatches -> onShareSelectedMatches()
+            is PersonAlbumContract.UiEvent.ConfirmIndexingOnboarding -> onConfirmIndexingOnboarding()
         }
     }
 
@@ -183,53 +186,75 @@ class PersonAlbumViewModel @Inject constructor(
         if (_uiState.value.isPreparingGallery || _uiState.value.isDetecting) return
 
         viewModelScope.launch {
-            try {
-                // Wait for any in-flight indexing before searching:
-                //  • First launch  → face DB is empty, must index everything.
-                //  • New photos detected → MediaStoreObserver or GroupifyApp.onCreate already
-                //    enqueued IndexFacesWorker; we wait so the search includes the new photos.
-                //  • Normal launch, nothing new → worker is not active, skip straight to search.
-                val storedFaces = faceIndexRepository.getAllFaces().first()
-                val activeWork = workManager
-                    .getWorkInfosForUniqueWorkFlow(IndexFacesWorker.WORK_NAME)
-                    .first()
-                val isIndexing = activeWork.any {
-                    it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
-                }
-
-                if (storedFaces.isEmpty() || isIndexing) {
-                    _uiState.update {
-                        it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
-                    }
-
-                    val succeeded = awaitIndexing()
-
-                    _uiState.update { it.copy(isPreparingGallery = false) }
-                    if (!succeeded) {
-                        _uiState.update { it.copy(userMessage = "Photo indexing failed. Please try again.") }
-                        return@launch
-                    }
-                }
-
-                // Run face search with selected bounding boxes and sensitivity threshold.
-                _uiState.update { it.copy(isDetecting = true, matches = emptyList(), matchSelectionMode = false, selectedMatchUris = emptySet()) }
-                val threshold = DEFAULT_MATCH_THRESHOLD
-                val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
-                val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)
-                val matchUiModels = results.map { match ->
-                    MatchUiModel(
-                        uri = match.uri,
-                        scorePercent = (match.score * 100).toInt().coerceIn(0, 100),
-                    )
-                }
-                _uiState.update { it.copy(matches = matchUiModels) }
-            } catch (e: IllegalArgumentException) {
-                _uiState.update { it.copy(userMessage = e.message ?: "No face detected in the selected photo.") }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(userMessage = e.message ?: "Detection failed. Please try again.") }
-            } finally {
-                _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
+            // Show the one-time onboarding dialog when the index doesn't exist yet
+            // and the user hasn't seen the explanation before.
+            val storedFaces = faceIndexRepository.getAllFaces().first()
+            if (storedFaces.isEmpty() && !onboardingPrefs.hasSeenOnboarding()) {
+                _uiState.update { it.copy(showIndexingOnboardingDialog = true) }
+                return@launch
             }
+
+            runDetection(queryUri, selectedFaces)
+        }
+    }
+
+    private fun onConfirmIndexingOnboarding() {
+        onboardingPrefs.markSeen()
+        _uiState.update { it.copy(showIndexingOnboardingDialog = false) }
+        // Resume the detection flow now that the user has acknowledged the dialog.
+        onStartDetection()
+    }
+
+    private suspend fun runDetection(
+        queryUri: String,
+        selectedFaces: List<QueryFaceUiModel>,
+    ) {
+        try {
+            // Wait for any in-flight indexing before searching:
+            //  • First launch  → face DB is empty, must index everything.
+            //  • New photos detected → MediaStoreObserver or GroupifyApp.onCreate already
+            //    enqueued IndexFacesWorker; we wait so the search includes the new photos.
+            //  • Normal launch, nothing new → worker is not active, skip straight to search.
+            val storedFaces = faceIndexRepository.getAllFaces().first()
+            val activeWork = workManager
+                .getWorkInfosForUniqueWorkFlow(IndexFacesWorker.WORK_NAME)
+                .first()
+            val isIndexing = activeWork.any {
+                it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+            }
+
+            if (storedFaces.isEmpty() || isIndexing) {
+                _uiState.update {
+                    it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
+                }
+
+                val succeeded = awaitIndexing()
+
+                _uiState.update { it.copy(isPreparingGallery = false) }
+                if (!succeeded) {
+                    _uiState.update { it.copy(userMessage = "Photo indexing failed. Please try again.") }
+                    return
+                }
+            }
+
+            // Run face search with selected bounding boxes and sensitivity threshold.
+            _uiState.update { it.copy(isDetecting = true, matches = emptyList(), matchSelectionMode = false, selectedMatchUris = emptySet()) }
+            val threshold = DEFAULT_MATCH_THRESHOLD
+            val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
+            val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)
+            val matchUiModels = results.map { match ->
+                MatchUiModel(
+                    uri = match.uri,
+                    scorePercent = (match.score * 100).toInt().coerceIn(0, 100),
+                )
+            }
+            _uiState.update { it.copy(matches = matchUiModels) }
+        } catch (e: IllegalArgumentException) {
+            _uiState.update { it.copy(userMessage = e.message ?: "No face detected in the selected photo.") }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(userMessage = e.message ?: "Detection failed. Please try again.") }
+        } finally {
+            _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
         }
     }
 

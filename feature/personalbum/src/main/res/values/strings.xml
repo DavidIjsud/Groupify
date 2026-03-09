@@ -38,6 +38,11 @@
     <!-- System share chooser title -->
     <string name="photomatch_share_via">Share via</string>
 
+    <!-- First-time indexing onboarding dialog -->
+    <string name="photomatch_onboarding_title">Preparing your photo library</string>
+    <string name="photomatch_onboarding_message">To give you faster and more accurate results, Groupify needs to index your photos the first time you use face search. This may take a few minutes depending on how many photos you have. You can safely leave or close the app — the process will continue in the background.</string>
+    <string name="photomatch_onboarding_btn_ok">OK</string>
+
     <!-- Content descriptions -->
     <string name="photomatch_cd_query_photo">Selected query photo</string>
     <string name="photomatch_cd_dismiss">Dismiss</string>
