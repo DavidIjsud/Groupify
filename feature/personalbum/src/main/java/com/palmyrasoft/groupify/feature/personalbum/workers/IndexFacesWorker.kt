@@ -12,6 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.IndexFacesAndEmbeddingsUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -33,6 +34,7 @@ class IndexFacesWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val indexFacesAndEmbeddingsUseCase: IndexFacesAndEmbeddingsUseCase,
     private val notificationHelper: IndexingNotificationHelper,
+    private val indexingPrefs: IndexingOnboardingPrefs,
 ) : CoroutineWorker(appContext, params) {
 
     /**
@@ -62,7 +64,9 @@ class IndexFacesWorker @AssistedInject constructor(
                 setForeground(buildForegroundInfo(progress.current, progress.total))
             }
 
-            // All photos processed — show a summary notification and signal success.
+            // All photos processed — persist the completion flag so future app launches
+            // and MediaStore changes are allowed to trigger auto-indexing.
+            indexingPrefs.markInitialIndexComplete()
             notificationHelper.showCompletionNotification()
             Result.success()
         } catch (e: Exception) {

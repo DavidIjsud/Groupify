@@ -4,6 +4,7 @@ import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
 import androidx.work.WorkManager
+import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,11 +22,18 @@ import javax.inject.Singleton
 @Singleton
 class MediaStoreObserver @Inject constructor(
     private val workManager: WorkManager,
+    private val indexingPrefs: IndexingOnboardingPrefs,
 ) : ContentObserver(Handler(Looper.getMainLooper())) {
 
     // Re-use the same Handler for debouncing so there is only one pending callback at a time.
     private val handler = Handler(Looper.getMainLooper())
-    private val enqueueWork = Runnable { IndexFacesWorker.enqueueOneTime(workManager) }
+    private val enqueueWork = Runnable {
+        // Only react to photo changes after the first index has been built.
+        // Before that, the user hasn't opted in yet, so we must not start indexing silently.
+        if (indexingPrefs.hasCompletedInitialIndex()) {
+            IndexFacesWorker.enqueueOneTime(workManager)
+        }
+    }
 
     override fun onChange(selfChange: Boolean) {
         // Cancel any pending trigger and restart the debounce window.

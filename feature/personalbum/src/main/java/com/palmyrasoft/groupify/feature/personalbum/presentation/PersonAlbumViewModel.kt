@@ -199,7 +199,7 @@ class PersonAlbumViewModel @Inject constructor(
     }
 
     private fun onConfirmIndexingOnboarding() {
-        onboardingPrefs.markSeen()
+        onboardingPrefs.markOnboardingSeen()
         _uiState.update { it.copy(showIndexingOnboardingDialog = false) }
         // Resume the detection flow now that the user has acknowledged the dialog.
         onStartDetection()

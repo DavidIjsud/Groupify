@@ -6,6 +6,7 @@ import android.provider.MediaStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.workers.IndexFacesWorker
 import com.palmyrasoft.groupify.feature.personalbum.workers.MediaStoreObserver
 import dagger.hilt.android.HiltAndroidApp
@@ -31,15 +32,23 @@ class GroupifyApp : Application(), Configuration.Provider {
     @Inject
     lateinit var mediaStoreObserver: MediaStoreObserver
 
+    @Inject
+    lateinit var indexingPrefs: IndexingOnboardingPrefs
+
     override fun onCreate() {
         super.onCreate() // Hilt injection runs here — @Inject fields are ready after this line.
 
-        // Index any photos that were added while the app process was not running.
-        // KEEP policy means this is a no-op if a worker is already enqueued or running.
-        IndexFacesWorker.enqueueOneTime(workManager)
+        // Only auto-index on launch after the user has completed the first indexing run.
+        // On first install this is skipped — the user must explicitly start the search flow,
+        // acknowledge the onboarding dialog, and let indexing complete before we ever run it
+        // automatically on future launches.
+        if (indexingPrefs.hasCompletedInitialIndex()) {
+            IndexFacesWorker.enqueueOneTime(workManager)
+        }
 
         // Watch for new photos added while the app is alive (foreground or background).
-        // The observer debounces bursts and re-enqueues IndexFacesWorker as needed.
+        // The observer itself is also gated on hasCompletedInitialIndex so it won't fire
+        // before the first index exists.
         contentResolver.registerContentObserver(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
             /* notifyForDescendants = */ true,
