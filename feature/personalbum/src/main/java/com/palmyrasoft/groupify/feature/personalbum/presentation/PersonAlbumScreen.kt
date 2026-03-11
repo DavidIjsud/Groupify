@@ -413,26 +413,12 @@ fun PersonAlbumScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     if (uiState.matchSelectionMode) {
-                        // Selection action bar
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "${uiState.selectedMatchUris.size} selected",
-                                color = Color.White,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                            )
-                            IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearMatchSelection) }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Clear,
-                                    contentDescription = null,
-                                    tint = TextSecondary,
-                                )
-                            }
-                        }
+                        Text(
+                            text = "${uiState.selectedMatchUris.size} selected",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     } else {
                         // Normal results header
                         Text(
@@ -521,18 +507,35 @@ fun PersonAlbumScreen(
             } else {
                 PersonAlbumContract.UiEvent.ShareMatches
             }
-            FloatingActionButton(
-                onClick = { viewModel.onEvent(fabShareEvent) },
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(24.dp),
-                containerColor = AccentPurple,
-                contentColor = Color.White,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Share,
-                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
-                )
+                if (uiState.selectedMatchUris.isNotEmpty()) {
+                    FloatingActionButton(
+                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearMatchSelection) },
+                        containerColor = CardBackground,
+                        contentColor = TextSecondary,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Clear,
+                            contentDescription = stringResource(R.string.photomatch_cd_dismiss),
+                        )
+                    }
+                }
+                FloatingActionButton(
+                    onClick = { viewModel.onEvent(fabShareEvent) },
+                    containerColor = AccentPurple,
+                    contentColor = Color.White,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = stringResource(R.string.photomatch_btn_share_matches),
+                    )
+                }
             }
         }
     }
