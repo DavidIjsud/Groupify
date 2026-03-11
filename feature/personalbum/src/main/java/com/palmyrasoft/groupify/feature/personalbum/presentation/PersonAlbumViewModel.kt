@@ -172,7 +172,6 @@ class PersonAlbumViewModel @Inject constructor(
             val uris = _uiState.value.selectedMatchUris.toList()
             if (uris.isEmpty()) return@launch
             _uiEffect.emit(PersonAlbumContract.UiEffect.ShareUris(uris))
-            _uiState.update { it.copy(matchSelectionMode = false, selectedMatchUris = emptySet()) }
         }
     }
 
