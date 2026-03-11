@@ -5,6 +5,7 @@ int string photomatch_btn_clear_selection 0x0
 int string photomatch_btn_grant_permission 0x0
 int string photomatch_btn_select_all 0x0
 int string photomatch_btn_share_matches 0x0
+int string photomatch_btn_share_selected 0x0
 int string photomatch_btn_start_detection 0x0
 int string photomatch_btn_take_photo 0x0
 int string photomatch_cd_dismiss 0x0

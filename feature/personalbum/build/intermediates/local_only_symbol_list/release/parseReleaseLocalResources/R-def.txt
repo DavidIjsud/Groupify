@@ -7,6 +7,7 @@ string photomatch_btn_clear_selection
 string photomatch_btn_grant_permission
 string photomatch_btn_select_all
 string photomatch_btn_share_matches
+string photomatch_btn_share_selected
 string photomatch_btn_start_detection
 string photomatch_btn_take_photo
 string photomatch_cd_dismiss

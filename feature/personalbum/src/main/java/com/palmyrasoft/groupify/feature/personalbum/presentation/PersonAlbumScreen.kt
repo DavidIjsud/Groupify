@@ -56,6 +56,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -185,6 +186,14 @@ fun PersonAlbumScreen(
     val busy = uiState.isPreparingGallery || uiState.isDetecting
 
     val listState = rememberLazyListState()
+
+    val isLastItemVisible by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()
+            lastVisible != null && lastVisible.index >= layoutInfo.totalItemsCount - 1
+        }
+    }
 
     // Auto-scroll to the results header when matches arrive.
     // Index is computed from the same conditional items that precede it in the LazyColumn.
@@ -506,7 +515,7 @@ fun PersonAlbumScreen(
             )
         }
 
-        if (uiState.matches.isNotEmpty() && !uiState.matchSelectionMode) {
+        if (uiState.matches.isNotEmpty() && !uiState.matchSelectionMode && !isLastItemVisible) {
             FloatingActionButton(
                 onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
                 modifier = Modifier
