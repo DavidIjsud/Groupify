@@ -515,9 +515,14 @@ fun PersonAlbumScreen(
             )
         }
 
-        if (uiState.matches.isNotEmpty() && !uiState.matchSelectionMode && !isLastItemVisible) {
+        if (uiState.matches.isNotEmpty() && !isLastItemVisible) {
+            val fabShareEvent = if (uiState.matchSelectionMode && uiState.selectedMatchUris.isNotEmpty()) {
+                PersonAlbumContract.UiEvent.ShareSelectedMatches
+            } else {
+                PersonAlbumContract.UiEvent.ShareMatches
+            }
             FloatingActionButton(
-                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareMatches) },
+                onClick = { viewModel.onEvent(fabShareEvent) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(24.dp),
