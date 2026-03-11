@@ -8,6 +8,7 @@
     <string name="photomatch_btn_take_photo">Take a Photo</string>
     <string name="photomatch_btn_grant_permission">Grant</string>
     <string name="photomatch_btn_share_matches">Share Matches</string>
+    <string name="photomatch_btn_share_selected">Share %1$d selected</string>
     <string name="photomatch_btn_start_detection">Start Detection</string>
     <string name="photomatch_btn_select_all">Select all</string>
     <string name="photomatch_btn_clear_selection">Clear</string>

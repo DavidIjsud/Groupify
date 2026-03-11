@@ -416,16 +416,6 @@ fun PersonAlbumScreen(
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.weight(1f),
                             )
-                            IconButton(
-                                onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ShareSelectedMatches) },
-                                enabled = uiState.selectedMatchUris.isNotEmpty(),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Share,
-                                    contentDescription = stringResource(R.string.photomatch_btn_share_matches),
-                                    tint = if (uiState.selectedMatchUris.isNotEmpty()) AccentPurple else TextSecondary,
-                                )
-                            }
                             IconButton(onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearMatchSelection) }) {
                                 Icon(
                                     imageVector = Icons.Filled.Clear,
@@ -467,7 +457,45 @@ fun PersonAlbumScreen(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(88.dp))
+                    val shareLabel = if (uiState.matchSelectionMode && uiState.selectedMatchUris.isNotEmpty()) {
+                        stringResource(R.string.photomatch_btn_share_selected, uiState.selectedMatchUris.size)
+                    } else {
+                        stringResource(R.string.photomatch_btn_share_matches)
+                    }
+                    val shareEnabled = !uiState.matchSelectionMode || uiState.selectedMatchUris.isNotEmpty()
+                    val shareEvent = if (uiState.matchSelectionMode) {
+                        PersonAlbumContract.UiEvent.ShareSelectedMatches
+                    } else {
+                        PersonAlbumContract.UiEvent.ShareMatches
+                    }
+
+                    Button(
+                        onClick = { viewModel.onEvent(shareEvent) },
+                        enabled = shareEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentPurple,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFF2C2C2E),
+                            disabledContentColor = TextSecondary,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = shareLabel,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
