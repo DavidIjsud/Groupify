@@ -13,6 +13,7 @@ string photomatch_cd_dismiss
 string photomatch_cd_query_photo
 string photomatch_detecting
 string photomatch_detecting_faces
+string photomatch_error_no_faces_indexed
 string photomatch_indexing_progress
 string photomatch_match_sensitivity
 string photomatch_onboarding_btn_ok

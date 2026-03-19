@@ -234,6 +234,12 @@ class PersonAlbumViewModel @Inject constructor(
                     _uiState.update { it.copy(userMessage = "Photo indexing failed. Please try again.") }
                     return
                 }
+
+                val facesAfterIndexing = faceIndexRepository.getAllFaces().first()
+                if (facesAfterIndexing.isEmpty()) {
+                    _uiState.update { it.copy(userMessage = "No faces found in your photo library. Make sure your photos contain people.") }
+                    return
+                }
             }
 
             // Run face search with selected bounding boxes and sensitivity threshold.

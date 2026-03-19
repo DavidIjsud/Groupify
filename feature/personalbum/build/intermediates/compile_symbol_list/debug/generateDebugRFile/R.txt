@@ -12,6 +12,7 @@ int string photomatch_cd_dismiss 0x0
 int string photomatch_cd_query_photo 0x0
 int string photomatch_detecting 0x0
 int string photomatch_detecting_faces 0x0
+int string photomatch_error_no_faces_indexed 0x0
 int string photomatch_indexing_progress 0x0
 int string photomatch_match_sensitivity 0x0
 int string photomatch_onboarding_btn_ok 0x0
