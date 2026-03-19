@@ -22,10 +22,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.palmyrasoft.groupify" />
+                  <option name="mobileSdkAppId" value="1:555136459954:android:524d36f51c914c504155ab" />
+                  <option name="projectId" value="groupify-758bb" />
+                  <option name="projectNumber" value="555136459954" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
