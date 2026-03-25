@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.palmyrasoft.groupify.feature.personalbum.presentation.PersonAlbumViewModel

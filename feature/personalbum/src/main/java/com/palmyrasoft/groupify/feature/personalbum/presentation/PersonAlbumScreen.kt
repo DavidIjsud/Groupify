@@ -408,19 +408,6 @@ fun PersonAlbumScreen(
                 }
             }
 
-            // Test Crash button — triggers an intentional crash to verify Crashlytics reporting
-            item {
-                OutlinedButton(
-                    onClick = { throw RuntimeException("Test Crash") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFFFF3B30)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF3B30)),
-                ) {
-                    Text("Test Crash")
-                }
-            }
-
             // Results section
             if (uiState.matches.isNotEmpty()) {
                 item {
