@@ -33,10 +33,8 @@ public class FaceEmbeddingDao_Impl(
   private val __insertAdapterOfFaceEmbeddingEntity: EntityInsertAdapter<FaceEmbeddingEntity>
   init {
     this.__db = __db
-    this.__insertAdapterOfFaceEmbeddingEntity = object : EntityInsertAdapter<FaceEmbeddingEntity>()
-        {
-      protected override fun createQuery(): String =
-          "INSERT OR REPLACE INTO `face_embeddings` (`id`,`photoId`,`left`,`top`,`right`,`bottom`,`embeddingBlob`,`createdAt`) VALUES (nullif(?, 0),?,?,?,?,?,?,?)"
+    this.__insertAdapterOfFaceEmbeddingEntity = object : EntityInsertAdapter<FaceEmbeddingEntity>() {
+      protected override fun createQuery(): String = "INSERT OR REPLACE INTO `face_embeddings` (`id`,`photoId`,`left`,`top`,`right`,`bottom`,`embeddingBlob`,`createdAt`) VALUES (nullif(?, 0),?,?,?,?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: FaceEmbeddingEntity) {
         statement.bindLong(1, entity.id.toLong())
@@ -51,8 +49,7 @@ public class FaceEmbeddingDao_Impl(
     }
   }
 
-  public override suspend fun insertAll(embeddings: List<FaceEmbeddingEntity>): Unit =
-      performSuspending(__db, false, true) { _connection ->
+  public override suspend fun insertAll(embeddings: List<FaceEmbeddingEntity>): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfFaceEmbeddingEntity.insert(_connection, embeddings)
   }
 
@@ -88,8 +85,7 @@ public class FaceEmbeddingDao_Impl(
           _tmpEmbeddingBlob = _stmt.getBlob(_columnIndexOfEmbeddingBlob)
           val _tmpCreatedAt: Long
           _tmpCreatedAt = _stmt.getLong(_columnIndexOfCreatedAt)
-          _item =
-              FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
+          _item = FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
           _result.add(_item)
         }
         _result
@@ -133,8 +129,7 @@ public class FaceEmbeddingDao_Impl(
           _tmpEmbeddingBlob = _stmt.getBlob(_columnIndexOfEmbeddingBlob)
           val _tmpCreatedAt: Long
           _tmpCreatedAt = _stmt.getLong(_columnIndexOfCreatedAt)
-          _item =
-              FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
+          _item = FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
           _result.add(_item)
         }
         _result
@@ -144,8 +139,7 @@ public class FaceEmbeddingDao_Impl(
     }
   }
 
-  public override suspend fun getEmbeddingsForPhotoIds(photoIds: List<String>):
-      List<FaceEmbeddingEntity> {
+  public override suspend fun getEmbeddingsForPhotoIds(photoIds: List<String>): List<FaceEmbeddingEntity> {
     val _stringBuilder: StringBuilder = StringBuilder()
     _stringBuilder.append("SELECT * FROM face_embeddings WHERE photoId IN (")
     val _inputSize: Int = photoIds.size
@@ -187,8 +181,7 @@ public class FaceEmbeddingDao_Impl(
           _tmpEmbeddingBlob = _stmt.getBlob(_columnIndexOfEmbeddingBlob)
           val _tmpCreatedAt: Long
           _tmpCreatedAt = _stmt.getLong(_columnIndexOfCreatedAt)
-          _item_1 =
-              FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
+          _item_1 = FaceEmbeddingEntity(_tmpId,_tmpPhotoId,_tmpLeft,_tmpTop,_tmpRight,_tmpBottom,_tmpEmbeddingBlob,_tmpCreatedAt)
           _result.add(_item_1)
         }
         _result
