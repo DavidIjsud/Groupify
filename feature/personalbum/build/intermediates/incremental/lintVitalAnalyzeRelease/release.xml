@@ -6,7 +6,7 @@
     mergedManifest="build/intermediates/merged_manifest/release/processReleaseManifest/AndroidManifest.xml"
     proguardFiles="build/intermediates/default_proguard_files/global/proguard-android.txt-8.12.3"
     partialResultsDir="build/intermediates/lint_vital_partial_results/release/lintVitalAnalyzeRelease/out"
-    desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/0f7196a6fdd18973d0155fd869a87cf9/transformed/D8BackportedDesugaredMethods.txt">
+    desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/79366861d8f088efde42661144b4d3ef/transformed/D8BackportedDesugaredMethods.txt">
   <buildFeatures
       namespacing="REQUIRED"/>
   <sourceProviders>
@@ -26,6 +26,6 @@
       applicationId="com.palmyrasoft.groupify.feature.personalbum"
       generatedSourceFolders="build/generated/ksp/release/java:build/generated/ksp/release/kotlin:build/generated/ap_generated_sources/release/out:build/generated/source/buildConfig/release"
       generatedResourceFolders="build/generated/res/resValues/release"
-      desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/0f7196a6fdd18973d0155fd869a87cf9/transformed/D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/79366861d8f088efde42661144b4d3ef/transformed/D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>

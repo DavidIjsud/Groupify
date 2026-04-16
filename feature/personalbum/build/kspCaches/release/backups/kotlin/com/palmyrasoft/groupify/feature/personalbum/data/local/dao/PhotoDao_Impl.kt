@@ -30,8 +30,7 @@ public class PhotoDao_Impl(
   init {
     this.__db = __db
     this.__insertAdapterOfPhotoEntity = object : EntityInsertAdapter<PhotoEntity>() {
-      protected override fun createQuery(): String =
-          "INSERT OR IGNORE INTO `photos` (`id`,`uri`,`dateTaken`,`lastIndexedAt`) VALUES (?,?,?,?)"
+      protected override fun createQuery(): String = "INSERT OR IGNORE INTO `photos` (`id`,`uri`,`dateTaken`,`lastIndexedAt`) VALUES (?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: PhotoEntity) {
         statement.bindText(1, entity.id)
@@ -47,8 +46,7 @@ public class PhotoDao_Impl(
     }
   }
 
-  public override suspend fun upsertPhotos(photos: List<PhotoEntity>): Unit =
-      performSuspending(__db, false, true) { _connection ->
+  public override suspend fun upsertPhotos(photos: List<PhotoEntity>): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfPhotoEntity.insert(_connection, photos)
   }
 

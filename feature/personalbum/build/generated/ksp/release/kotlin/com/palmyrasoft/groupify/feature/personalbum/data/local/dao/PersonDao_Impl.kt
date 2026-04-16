@@ -31,8 +31,7 @@ public class PersonDao_Impl(
   init {
     this.__db = __db
     this.__insertAdapterOfPersonEntity = object : EntityInsertAdapter<PersonEntity>() {
-      protected override fun createQuery(): String =
-          "INSERT OR REPLACE INTO `persons` (`id`,`name`,`referenceEmbeddingBlob`,`createdAt`) VALUES (?,?,?,?)"
+      protected override fun createQuery(): String = "INSERT OR REPLACE INTO `persons` (`id`,`name`,`referenceEmbeddingBlob`,`createdAt`) VALUES (?,?,?,?)"
 
       protected override fun bind(statement: SQLiteStatement, entity: PersonEntity) {
         statement.bindText(1, entity.id)
@@ -43,8 +42,7 @@ public class PersonDao_Impl(
     }
   }
 
-  public override suspend fun insert(person: PersonEntity): Unit = performSuspending(__db, false,
-      true) { _connection ->
+  public override suspend fun insert(person: PersonEntity): Unit = performSuspending(__db, false, true) { _connection ->
     __insertAdapterOfPersonEntity.insert(_connection, person)
   }
 
@@ -57,8 +55,7 @@ public class PersonDao_Impl(
         _stmt.bindText(_argIndex, id)
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfName: Int = getColumnIndexOrThrow(_stmt, "name")
-        val _columnIndexOfReferenceEmbeddingBlob: Int = getColumnIndexOrThrow(_stmt,
-            "referenceEmbeddingBlob")
+        val _columnIndexOfReferenceEmbeddingBlob: Int = getColumnIndexOrThrow(_stmt, "referenceEmbeddingBlob")
         val _columnIndexOfCreatedAt: Int = getColumnIndexOrThrow(_stmt, "createdAt")
         val _result: PersonEntity?
         if (_stmt.step()) {
@@ -88,8 +85,7 @@ public class PersonDao_Impl(
       try {
         val _columnIndexOfId: Int = getColumnIndexOrThrow(_stmt, "id")
         val _columnIndexOfName: Int = getColumnIndexOrThrow(_stmt, "name")
-        val _columnIndexOfReferenceEmbeddingBlob: Int = getColumnIndexOrThrow(_stmt,
-            "referenceEmbeddingBlob")
+        val _columnIndexOfReferenceEmbeddingBlob: Int = getColumnIndexOrThrow(_stmt, "referenceEmbeddingBlob")
         val _columnIndexOfCreatedAt: Int = getColumnIndexOrThrow(_stmt, "createdAt")
         val _result: MutableList<PersonEntity> = mutableListOf()
         while (_stmt.step()) {

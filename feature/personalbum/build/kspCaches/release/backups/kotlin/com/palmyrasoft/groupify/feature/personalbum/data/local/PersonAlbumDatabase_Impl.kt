@@ -46,8 +46,7 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
   }
 
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(3,
-        "9011e8ec392d99e7de78372979775738", "f6d07c4e65e433de7e265426dd691251") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(3, "9011e8ec392d99e7de78372979775738", "f6d07c4e65e433de7e265426dd691251") {
       public override fun createAllTables(connection: SQLiteConnection) {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `uri` TEXT NOT NULL, `dateTaken` INTEGER NOT NULL, `lastIndexedAt` INTEGER, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `face_embeddings` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `photoId` TEXT NOT NULL, `left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `embeddingBlob` BLOB NOT NULL, `createdAt` INTEGER NOT NULL)")
@@ -77,21 +76,15 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
       public override fun onPostMigrate(connection: SQLiteConnection) {
       }
 
-      public override fun onValidateSchema(connection: SQLiteConnection):
-          RoomOpenDelegate.ValidationResult {
+      public override fun onValidateSchema(connection: SQLiteConnection): RoomOpenDelegate.ValidationResult {
         val _columnsPhotos: MutableMap<String, TableInfo.Column> = mutableMapOf()
-        _columnsPhotos.put("id", TableInfo.Column("id", "TEXT", true, 1, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsPhotos.put("uri", TableInfo.Column("uri", "TEXT", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsPhotos.put("dateTaken", TableInfo.Column("dateTaken", "INTEGER", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsPhotos.put("lastIndexedAt", TableInfo.Column("lastIndexedAt", "INTEGER", false, 0,
-            null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotos.put("id", TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotos.put("uri", TableInfo.Column("uri", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotos.put("dateTaken", TableInfo.Column("dateTaken", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotos.put("lastIndexedAt", TableInfo.Column("lastIndexedAt", "INTEGER", false, 0, null, TableInfo.CREATED_FROM_ENTITY))
         val _foreignKeysPhotos: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
         val _indicesPhotos: MutableSet<TableInfo.Index> = mutableSetOf()
-        val _infoPhotos: TableInfo = TableInfo("photos", _columnsPhotos, _foreignKeysPhotos,
-            _indicesPhotos)
+        val _infoPhotos: TableInfo = TableInfo("photos", _columnsPhotos, _foreignKeysPhotos, _indicesPhotos)
         val _existingPhotos: TableInfo = read(connection, "photos")
         if (!_infoPhotos.equals(_existingPhotos)) {
           return RoomOpenDelegate.ValidationResult(false, """
@@ -103,28 +96,18 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
               |""".trimMargin() + _existingPhotos)
         }
         val _columnsFaceEmbeddings: MutableMap<String, TableInfo.Column> = mutableMapOf()
-        _columnsFaceEmbeddings.put("id", TableInfo.Column("id", "INTEGER", true, 1, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("photoId", TableInfo.Column("photoId", "TEXT", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("left", TableInfo.Column("left", "REAL", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("top", TableInfo.Column("top", "REAL", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("right", TableInfo.Column("right", "REAL", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("bottom", TableInfo.Column("bottom", "REAL", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("embeddingBlob", TableInfo.Column("embeddingBlob", "BLOB", true,
-            0, null, TableInfo.CREATED_FROM_ENTITY))
-        _columnsFaceEmbeddings.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0,
-            null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("id", TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("photoId", TableInfo.Column("photoId", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("left", TableInfo.Column("left", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("top", TableInfo.Column("top", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("right", TableInfo.Column("right", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("bottom", TableInfo.Column("bottom", "REAL", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("embeddingBlob", TableInfo.Column("embeddingBlob", "BLOB", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsFaceEmbeddings.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         val _foreignKeysFaceEmbeddings: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
         val _indicesFaceEmbeddings: MutableSet<TableInfo.Index> = mutableSetOf()
-        _indicesFaceEmbeddings.add(TableInfo.Index("index_face_embeddings_photoId", false,
-            listOf("photoId"), listOf("ASC")))
-        val _infoFaceEmbeddings: TableInfo = TableInfo("face_embeddings", _columnsFaceEmbeddings,
-            _foreignKeysFaceEmbeddings, _indicesFaceEmbeddings)
+        _indicesFaceEmbeddings.add(TableInfo.Index("index_face_embeddings_photoId", false, listOf("photoId"), listOf("ASC")))
+        val _infoFaceEmbeddings: TableInfo = TableInfo("face_embeddings", _columnsFaceEmbeddings, _foreignKeysFaceEmbeddings, _indicesFaceEmbeddings)
         val _existingFaceEmbeddings: TableInfo = read(connection, "face_embeddings")
         if (!_infoFaceEmbeddings.equals(_existingFaceEmbeddings)) {
           return RoomOpenDelegate.ValidationResult(false, """
@@ -136,18 +119,13 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
               |""".trimMargin() + _existingFaceEmbeddings)
         }
         val _columnsPersons: MutableMap<String, TableInfo.Column> = mutableMapOf()
-        _columnsPersons.put("id", TableInfo.Column("id", "TEXT", true, 1, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsPersons.put("name", TableInfo.Column("name", "TEXT", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
-        _columnsPersons.put("referenceEmbeddingBlob", TableInfo.Column("referenceEmbeddingBlob",
-            "BLOB", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
-        _columnsPersons.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0, null,
-            TableInfo.CREATED_FROM_ENTITY))
+        _columnsPersons.put("id", TableInfo.Column("id", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPersons.put("name", TableInfo.Column("name", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPersons.put("referenceEmbeddingBlob", TableInfo.Column("referenceEmbeddingBlob", "BLOB", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPersons.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
         val _foreignKeysPersons: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
         val _indicesPersons: MutableSet<TableInfo.Index> = mutableSetOf()
-        val _infoPersons: TableInfo = TableInfo("persons", _columnsPersons, _foreignKeysPersons,
-            _indicesPersons)
+        val _infoPersons: TableInfo = TableInfo("persons", _columnsPersons, _foreignKeysPersons, _indicesPersons)
         val _existingPersons: TableInfo = read(connection, "persons")
         if (!_infoPersons.equals(_existingPersons)) {
           return RoomOpenDelegate.ValidationResult(false, """
@@ -167,8 +145,7 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
   protected override fun createInvalidationTracker(): InvalidationTracker {
     val _shadowTablesMap: MutableMap<String, String> = mutableMapOf()
     val _viewTables: MutableMap<String, Set<String>> = mutableMapOf()
-    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "photos", "face_embeddings",
-        "persons")
+    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "photos", "face_embeddings", "persons")
   }
 
   public override fun clearAllTables() {
@@ -188,9 +165,7 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
     return _autoMigrationSpecsSet
   }
 
-  public override
-      fun createAutoMigrations(autoMigrationSpecs: Map<KClass<out AutoMigrationSpec>, AutoMigrationSpec>):
-      List<Migration> {
+  public override fun createAutoMigrations(autoMigrationSpecs: Map<KClass<out AutoMigrationSpec>, AutoMigrationSpec>): List<Migration> {
     val _autoMigrations: MutableList<Migration> = mutableListOf()
     return _autoMigrations
   }
