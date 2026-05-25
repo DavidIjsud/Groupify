@@ -1,5 +1,6 @@
 package com.palmyrasoft.groupify.feature.personalbum.presentation
 
+import com.palmyrasoft.groupify.feature.personalbum.presentation.model.GroupUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.MatchUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
 
@@ -22,7 +23,19 @@ object PersonAlbumContract {
         val selectedMatchUris: Set<String> = emptySet(),
         // First-time indexing onboarding dialog
         val showIndexingOnboardingDialog: Boolean = false,
-    )
+        // Save-to-Group flow
+        val lastSearchedFaceCount: Int = 0,
+        val showCreateGroupSheet: Boolean = false,
+        val existingGroups: List<GroupUiModel> = emptyList(),
+    ) {
+        /** Photos a save/share acts on: the current selection, or all matches if none selected. */
+        val actionTargetUris: List<String>
+            get() = if (selectedMatchUris.isNotEmpty()) {
+                matches.map { it.uri }.filter { it in selectedMatchUris }
+            } else {
+                matches.map { it.uri }
+            }
+    }
 
     sealed interface UiEvent {
         data class PickQueryPhoto(val uri: String) : UiEvent
@@ -34,14 +47,22 @@ object PersonAlbumContract {
         data object SelectAllFaces : UiEvent
         data object ClearFaceSelection : UiEvent
         // Match photo selection
+        data object ToggleSelectionMode : UiEvent
         data class LongPressMatch(val uri: String) : UiEvent
         data class TapMatch(val uri: String) : UiEvent
         data object ClearMatchSelection : UiEvent
         data object ShareSelectedMatches : UiEvent
         data object ConfirmIndexingOnboarding : UiEvent
+        // Save-to-Group flow
+        data object OpenSaveToGroup : UiEvent
+        data object DismissSaveToGroup : UiEvent
+        data class CreateGroup(val name: String) : UiEvent
+        data class AddToExistingGroup(val groupId: String) : UiEvent
     }
 
     sealed interface UiEffect {
         data class ShareUris(val uris: List<String>) : UiEffect
+        /** A save succeeded — the screen shows a localized confirmation. */
+        data class GroupSaved(val groupName: String, val isNew: Boolean) : UiEffect
     }
 }

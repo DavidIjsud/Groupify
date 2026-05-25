@@ -85,6 +85,10 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.MatchUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
+import com.palmyrasoft.groupify.feature.personalbum.presentation.groups.CreateGroupSheet
+import com.palmyrasoft.groupify.feature.personalbum.presentation.util.shareImageUris
+import android.widget.Toast
+import androidx.compose.material.icons.filled.CreateNewFolder
 import java.io.File
 private val AccentPurple = Color(0xFF7B61FF)
 private val DarkBackground = Color(0xFF0E0E0E)
@@ -166,18 +170,14 @@ fun PersonAlbumScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                is PersonAlbumContract.UiEffect.ShareUris -> {
-                    if (effect.uris.isEmpty()) return@collect
-                    val parsedUris = effect.uris.map { Uri.parse(it) }
-                    val clip = ClipData.newUri(context.contentResolver, "Image", parsedUris.first())
-                        .also { c -> parsedUris.drop(1).forEach { uri -> c.addItem(ClipData.Item(uri)) } }
-                    val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
-                        type = "image/*"
-                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(parsedUris))
-                        clipData = clip
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                is PersonAlbumContract.UiEffect.ShareUris -> shareImageUris(context, effect.uris)
+                is PersonAlbumContract.UiEffect.GroupSaved -> {
+                    val msg = if (effect.isNew) {
+                        context.getString(R.string.groups_created_confirmation, effect.groupName)
+                    } else {
+                        context.getString(R.string.groups_added_confirmation, effect.groupName)
                     }
-                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.photomatch_share_via)))
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -219,6 +219,8 @@ fun PersonAlbumScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp),
+            // Bottom inset so the last content clears the floating Home/Groups tab bar.
+            contentPadding = PaddingValues(bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -412,21 +414,60 @@ fun PersonAlbumScreen(
             if (uiState.matches.isNotEmpty()) {
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
-                    if (uiState.matchSelectionMode) {
-                        Text(
-                            text = "${uiState.selectedMatchUris.size} selected",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    } else {
-                        // Normal results header
-                        Text(
-                            text = pluralStringResource(R.plurals.photomatch_matches_found, uiState.matches.size, uiState.matches.size),
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            // Muted, uppercase count caption — "N selected" while picking.
+                            Text(
+                                text = if (uiState.matchSelectionMode && uiState.selectedMatchUris.isNotEmpty()) {
+                                    "${uiState.selectedMatchUris.size} selected"
+                                } else {
+                                    pluralStringResource(
+                                        R.plurals.groups_matches_caption,
+                                        uiState.matches.size,
+                                        uiState.matches.size,
+                                    ).uppercase()
+                                },
+                                color = TextSecondary,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                text = stringResource(R.string.groups_results_title),
+                                color = Color.White,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        // Select / Done pill — toggles read-only grid vs. tap-to-pick.
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(CardBackground)
+                                .clickable { viewModel.onEvent(PersonAlbumContract.UiEvent.ToggleSelectionMode) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = if (uiState.matchSelectionMode) AccentPurple else Color.White,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (uiState.matchSelectionMode) {
+                                    stringResource(R.string.groups_done)
+                                } else {
+                                    stringResource(R.string.groups_select)
+                                },
+                                color = if (uiState.matchSelectionMode) AccentPurple else Color.White,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
                 }
 
@@ -464,6 +505,30 @@ fun PersonAlbumScreen(
                         PersonAlbumContract.UiEvent.ShareMatches
                     }
 
+                    // Save to Group — outlined, stacked ABOVE the Share button (Groups flow).
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.OpenSaveToGroup) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.5.dp, AccentPurple),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CreateNewFolder,
+                            contentDescription = null,
+                            tint = AccentPurple,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.groups_btn_save_to_group),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Button(
                         onClick = { viewModel.onEvent(shareEvent) },
                         enabled = shareEnabled,
@@ -498,6 +563,17 @@ fun PersonAlbumScreen(
         if (uiState.showIndexingOnboardingDialog) {
             IndexingOnboardingDialog(
                 onConfirm = { viewModel.onEvent(PersonAlbumContract.UiEvent.ConfirmIndexingOnboarding) },
+            )
+        }
+
+        if (uiState.showCreateGroupSheet) {
+            CreateGroupSheet(
+                photoCount = uiState.actionTargetUris.size,
+                faceCount = uiState.lastSearchedFaceCount,
+                existingGroups = uiState.existingGroups,
+                onDismiss = { viewModel.onEvent(PersonAlbumContract.UiEvent.DismissSaveToGroup) },
+                onCreate = { viewModel.onEvent(PersonAlbumContract.UiEvent.CreateGroup(it)) },
+                onAddToExisting = { viewModel.onEvent(PersonAlbumContract.UiEvent.AddToExistingGroup(it)) },
             )
         }
 

@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.palmyrasoft.groupify.feature.personalbum.presentation.PersonAlbumScreen
+import com.palmyrasoft.groupify.feature.personalbum.presentation.GroupifyRoot
 import com.palmyrasoft.groupify.ui.theme.GroupifyTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
             GroupifyTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        PersonAlbumScreen()
+                        GroupifyRoot()
                     }
                 }
             }

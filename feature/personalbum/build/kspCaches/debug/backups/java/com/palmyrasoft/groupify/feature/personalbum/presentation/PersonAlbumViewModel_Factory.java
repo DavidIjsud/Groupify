@@ -3,8 +3,11 @@ package com.palmyrasoft.groupify.feature.personalbum.presentation;
 import androidx.work.WorkManager;
 import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs;
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository;
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.AddPhotosToGroupUseCase;
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase;
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.CreateGroupUseCase;
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase;
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.GetGroupsUseCase;
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -42,23 +45,35 @@ public final class PersonAlbumViewModel_Factory implements Factory<PersonAlbumVi
 
   private final Provider<IndexingOnboardingPrefs> onboardingPrefsProvider;
 
+  private final Provider<GetGroupsUseCase> getGroupsUseCaseProvider;
+
+  private final Provider<CreateGroupUseCase> createGroupUseCaseProvider;
+
+  private final Provider<AddPhotosToGroupUseCase> addPhotosToGroupUseCaseProvider;
+
   private PersonAlbumViewModel_Factory(Provider<WorkManager> workManagerProvider,
       Provider<SearchByPhotoUseCase> searchByPhotoUseCaseProvider,
       Provider<DetectQueryFacesUseCase> detectQueryFacesUseCaseProvider,
       Provider<BuildQueryFaceThumbnailsUseCase> buildQueryFaceThumbnailsUseCaseProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider,
-      Provider<IndexingOnboardingPrefs> onboardingPrefsProvider) {
+      Provider<IndexingOnboardingPrefs> onboardingPrefsProvider,
+      Provider<GetGroupsUseCase> getGroupsUseCaseProvider,
+      Provider<CreateGroupUseCase> createGroupUseCaseProvider,
+      Provider<AddPhotosToGroupUseCase> addPhotosToGroupUseCaseProvider) {
     this.workManagerProvider = workManagerProvider;
     this.searchByPhotoUseCaseProvider = searchByPhotoUseCaseProvider;
     this.detectQueryFacesUseCaseProvider = detectQueryFacesUseCaseProvider;
     this.buildQueryFaceThumbnailsUseCaseProvider = buildQueryFaceThumbnailsUseCaseProvider;
     this.faceIndexRepositoryProvider = faceIndexRepositoryProvider;
     this.onboardingPrefsProvider = onboardingPrefsProvider;
+    this.getGroupsUseCaseProvider = getGroupsUseCaseProvider;
+    this.createGroupUseCaseProvider = createGroupUseCaseProvider;
+    this.addPhotosToGroupUseCaseProvider = addPhotosToGroupUseCaseProvider;
   }
 
   @Override
   public PersonAlbumViewModel get() {
-    return newInstance(workManagerProvider.get(), searchByPhotoUseCaseProvider.get(), detectQueryFacesUseCaseProvider.get(), buildQueryFaceThumbnailsUseCaseProvider.get(), faceIndexRepositoryProvider.get(), onboardingPrefsProvider.get());
+    return newInstance(workManagerProvider.get(), searchByPhotoUseCaseProvider.get(), detectQueryFacesUseCaseProvider.get(), buildQueryFaceThumbnailsUseCaseProvider.get(), faceIndexRepositoryProvider.get(), onboardingPrefsProvider.get(), getGroupsUseCaseProvider.get(), createGroupUseCaseProvider.get(), addPhotosToGroupUseCaseProvider.get());
   }
 
   public static PersonAlbumViewModel_Factory create(Provider<WorkManager> workManagerProvider,
@@ -66,14 +81,19 @@ public final class PersonAlbumViewModel_Factory implements Factory<PersonAlbumVi
       Provider<DetectQueryFacesUseCase> detectQueryFacesUseCaseProvider,
       Provider<BuildQueryFaceThumbnailsUseCase> buildQueryFaceThumbnailsUseCaseProvider,
       Provider<FaceIndexRepository> faceIndexRepositoryProvider,
-      Provider<IndexingOnboardingPrefs> onboardingPrefsProvider) {
-    return new PersonAlbumViewModel_Factory(workManagerProvider, searchByPhotoUseCaseProvider, detectQueryFacesUseCaseProvider, buildQueryFaceThumbnailsUseCaseProvider, faceIndexRepositoryProvider, onboardingPrefsProvider);
+      Provider<IndexingOnboardingPrefs> onboardingPrefsProvider,
+      Provider<GetGroupsUseCase> getGroupsUseCaseProvider,
+      Provider<CreateGroupUseCase> createGroupUseCaseProvider,
+      Provider<AddPhotosToGroupUseCase> addPhotosToGroupUseCaseProvider) {
+    return new PersonAlbumViewModel_Factory(workManagerProvider, searchByPhotoUseCaseProvider, detectQueryFacesUseCaseProvider, buildQueryFaceThumbnailsUseCaseProvider, faceIndexRepositoryProvider, onboardingPrefsProvider, getGroupsUseCaseProvider, createGroupUseCaseProvider, addPhotosToGroupUseCaseProvider);
   }
 
   public static PersonAlbumViewModel newInstance(WorkManager workManager,
       SearchByPhotoUseCase searchByPhotoUseCase, DetectQueryFacesUseCase detectQueryFacesUseCase,
       BuildQueryFaceThumbnailsUseCase buildQueryFaceThumbnailsUseCase,
-      FaceIndexRepository faceIndexRepository, IndexingOnboardingPrefs onboardingPrefs) {
-    return new PersonAlbumViewModel(workManager, searchByPhotoUseCase, detectQueryFacesUseCase, buildQueryFaceThumbnailsUseCase, faceIndexRepository, onboardingPrefs);
+      FaceIndexRepository faceIndexRepository, IndexingOnboardingPrefs onboardingPrefs,
+      GetGroupsUseCase getGroupsUseCase, CreateGroupUseCase createGroupUseCase,
+      AddPhotosToGroupUseCase addPhotosToGroupUseCase) {
+    return new PersonAlbumViewModel(workManager, searchByPhotoUseCase, detectQueryFacesUseCase, buildQueryFaceThumbnailsUseCase, faceIndexRepository, onboardingPrefs, getGroupsUseCase, createGroupUseCase, addPhotosToGroupUseCase);
   }
 }

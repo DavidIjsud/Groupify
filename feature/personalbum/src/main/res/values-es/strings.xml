@@ -57,4 +57,92 @@
         <item quantity="one">%d coincidencia similar encontrada</item>
         <item quantity="other">%d coincidencias similares encontradas</item>
     </plurals>
+
+    <!-- ===================== Flujo de grupos ===================== -->
+
+    <!-- Encabezado y acciones de la pantalla de resultados -->
+    <string name="groups_results_title">Fotos similares</string>
+    <string name="groups_select">Seleccionar</string>
+    <string name="groups_done">Listo</string>
+    <string name="groups_btn_save_to_group">Guardar en grupo</string>
+
+    <!-- Hoja inferior para crear grupo -->
+    <string name="groups_sheet_title">Guardar en grupo</string>
+    <string name="groups_field_label">Nombre del grupo</string>
+    <string name="groups_field_placeholder">p. ej. Fin de semana de cumpleaños</string>
+    <string name="groups_helper_empty">Nombra tu grupo para encontrarlo después.</string>
+    <string name="groups_helper_available">El nombre está disponible</string>
+    <!-- %1$s = el nombre en conflicto -->
+    <string name="groups_helper_duplicate">Ya existe un grupo llamado “%1$s”. Elige un nombre diferente.</string>
+    <string name="groups_create_new_instead">Toca para crear uno nuevo</string>
+    <string name="groups_suggestions">Sugerencias</string>
+    <string name="groups_add_to_existing">O agregar a uno existente</string>
+    <string name="groups_adding_to">Agregando a</string>
+    <!-- %1$d = cantidad actual, %2$d = cantidad después de agregar -->
+    <string name="groups_after_add">%1$d fotos → %2$d después de agregar</string>
+    <string name="groups_cta_create">Crear grupo y guardar</string>
+    <!-- %1$s = nombre del grupo -->
+    <string name="groups_cta_add">Agregar a %1$s</string>
+    <string name="groups_cd_close">Cerrar</string>
+    <!-- %1$s = nombre del grupo -->
+    <string name="groups_created_confirmation">Guardado en “%1$s”</string>
+    <string name="groups_added_confirmation">Agregado a “%1$s”</string>
+
+    <string-array name="groups_name_suggestions">
+        <item>Fin de semana</item>
+        <item>Familia</item>
+        <item>Amigos</item>
+        <item>Selfies</item>
+    </string-array>
+
+    <!-- Pantalla de grupos -->
+    <string name="groups_title">Grupos</string>
+    <string name="groups_search_placeholder">Buscar grupos</string>
+    <string name="groups_empty_title">Aún no hay grupos</string>
+    <string name="groups_empty_body">Después de buscar coincidencias, toca “Guardar en grupo” para mantenerlas juntas aquí.</string>
+    <string name="groups_btn_start_match">Iniciar una búsqueda</string>
+    <!-- %1$s = término de búsqueda -->
+    <string name="groups_search_empty">Ningún grupo coincide con “%1$s”</string>
+
+    <!-- Detalle del grupo -->
+    <string name="groups_detail_eyebrow">Grupo</string>
+    <string name="groups_btn_share">Compartir</string>
+    <string name="groups_btn_add_more">Agregar más</string>
+    <string name="groups_cd_more">Más opciones</string>
+    <string name="groups_cd_back">Atrás</string>
+    <string name="groups_menu_delete">Eliminar grupo</string>
+    <string name="groups_delete_title">¿Eliminar este grupo?</string>
+    <string name="groups_delete_body">Esto elimina solo el grupo. Tus fotos permanecen en tu galería.</string>
+    <string name="groups_delete_confirm">Eliminar</string>
+    <string name="groups_delete_cancel">Cancelar</string>
+
+    <!-- Navegación inferior -->
+    <string name="groups_tab_home">Inicio</string>
+    <string name="groups_tab_groups">Grupos</string>
+
+    <!-- Plurales de grupos -->
+    <plurals name="groups_photos_count">
+        <item quantity="one">%d foto</item>
+        <item quantity="other">%d fotos</item>
+    </plurals>
+    <plurals name="groups_faces_count">
+        <item quantity="one">%d rostro</item>
+        <item quantity="other">%d rostros</item>
+    </plurals>
+    <plurals name="groups_count">
+        <item quantity="one">%d grupo</item>
+        <item quantity="other">%d grupos</item>
+    </plurals>
+    <plurals name="groups_photos_saved">
+        <item quantity="one">%d foto guardada</item>
+        <item quantity="other">%d fotos guardadas</item>
+    </plurals>
+    <plurals name="groups_new_photos">
+        <item quantity="one">%d foto nueva</item>
+        <item quantity="other">%d fotos nuevas</item>
+    </plurals>
+    <plurals name="groups_matches_caption">
+        <item quantity="one">%d coincidencia encontrada</item>
+        <item quantity="other">%d coincidencias encontradas</item>
+    </plurals>
 </resources>

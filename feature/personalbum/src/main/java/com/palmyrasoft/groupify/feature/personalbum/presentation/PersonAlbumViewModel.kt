@@ -8,9 +8,13 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.AddPhotosToGroupUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.CreateGroupUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.GetGroupsUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
+import com.palmyrasoft.groupify.feature.personalbum.presentation.model.GroupUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.MatchUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
 import com.palmyrasoft.groupify.feature.personalbum.workers.IndexFacesWorker
@@ -22,7 +26,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -38,6 +44,9 @@ class PersonAlbumViewModel @Inject constructor(
     private val buildQueryFaceThumbnailsUseCase: BuildQueryFaceThumbnailsUseCase,
     private val faceIndexRepository: FaceIndexRepository,
     private val onboardingPrefs: IndexingOnboardingPrefs,
+    private val getGroupsUseCase: GetGroupsUseCase,
+    private val createGroupUseCase: CreateGroupUseCase,
+    private val addPhotosToGroupUseCase: AddPhotosToGroupUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonAlbumContract.UiState())
@@ -45,6 +54,26 @@ class PersonAlbumViewModel @Inject constructor(
 
     private val _uiEffect = MutableSharedFlow<PersonAlbumContract.UiEffect>()
     val uiEffect: SharedFlow<PersonAlbumContract.UiEffect> = _uiEffect.asSharedFlow()
+
+    init {
+        // Observe saved groups so the create-sheet has live duplicate-name data + the
+        // "add to existing" list without a per-keystroke DB round-trip.
+        getGroupsUseCase()
+            .onEach { groups ->
+                val models = groups.map { g ->
+                    GroupUiModel(
+                        id = g.id,
+                        name = g.name,
+                        photoCount = g.photoCount,
+                        faceCount = g.faceCount,
+                        updatedAt = g.updatedAt,
+                        previewUris = g.photoUris.take(4),
+                    )
+                }
+                _uiState.update { it.copy(existingGroups = models) }
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun onEvent(event: PersonAlbumContract.UiEvent) {
         when (event) {
@@ -55,11 +84,16 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.ToggleFaceSelection -> onToggleFaceSelection(event.faceId)
             is PersonAlbumContract.UiEvent.SelectAllFaces -> onSelectAllFaces()
             is PersonAlbumContract.UiEvent.ClearFaceSelection -> onClearFaceSelection()
+            is PersonAlbumContract.UiEvent.ToggleSelectionMode -> onToggleSelectionMode()
             is PersonAlbumContract.UiEvent.LongPressMatch -> onLongPressMatch(event.uri)
             is PersonAlbumContract.UiEvent.TapMatch -> onTapMatch(event.uri)
             is PersonAlbumContract.UiEvent.ClearMatchSelection -> onClearMatchSelection()
             is PersonAlbumContract.UiEvent.ShareSelectedMatches -> onShareSelectedMatches()
             is PersonAlbumContract.UiEvent.ConfirmIndexingOnboarding -> onConfirmIndexingOnboarding()
+            is PersonAlbumContract.UiEvent.OpenSaveToGroup -> onOpenSaveToGroup()
+            is PersonAlbumContract.UiEvent.DismissSaveToGroup -> _uiState.update { it.copy(showCreateGroupSheet = false) }
+            is PersonAlbumContract.UiEvent.CreateGroup -> onCreateGroup(event.name)
+            is PersonAlbumContract.UiEvent.AddToExistingGroup -> onAddToExistingGroup(event.groupId)
         }
     }
 
@@ -243,7 +277,17 @@ class PersonAlbumViewModel @Inject constructor(
             }
 
             // Run face search with selected bounding boxes and sensitivity threshold.
-            _uiState.update { it.copy(isDetecting = true, matches = emptyList(), matchSelectionMode = false, selectedMatchUris = emptySet()) }
+            // Record how many faces this search used — groups created from these results
+            // store it as their face count (Groups-flow product decision #4).
+            _uiState.update {
+                it.copy(
+                    isDetecting = true,
+                    matches = emptyList(),
+                    matchSelectionMode = false,
+                    selectedMatchUris = emptySet(),
+                    lastSearchedFaceCount = selectedFaces.size,
+                )
+            }
             val threshold = DEFAULT_MATCH_THRESHOLD
             val selectedBoundingBoxes = selectedFaces.map { it.boundingBox }
             val results = searchByPhotoUseCase(queryUri, selectedBoundingBoxes, threshold)
@@ -312,11 +356,70 @@ class PersonAlbumViewModel @Inject constructor(
 
     private fun onShareMatches() {
         viewModelScope.launch {
-            val uris = _uiState.value.matches.map { it.uri }
+            // Share acts on the current selection, or all matches when nothing is selected.
+            val uris = _uiState.value.actionTargetUris
             if (uris.isEmpty()) {
                 _uiState.update { it.copy(userMessage = "No matches to share.") }
             } else {
                 _uiEffect.emit(PersonAlbumContract.UiEffect.ShareUris(uris))
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Save-to-Group flow
+    // ---------------------------------------------------------------------------
+
+    /** Select/Done pill — toggles read-only grid vs. tap-to-pick selection mode. */
+    private fun onToggleSelectionMode() {
+        _uiState.update {
+            if (it.matchSelectionMode) {
+                it.copy(matchSelectionMode = false, selectedMatchUris = emptySet())
+            } else {
+                it.copy(matchSelectionMode = true)
+            }
+        }
+    }
+
+    private fun onOpenSaveToGroup() {
+        if (_uiState.value.matches.isEmpty()) {
+            _uiState.update { it.copy(userMessage = "No matches to save.") }
+            return
+        }
+        _uiState.update { it.copy(showCreateGroupSheet = true) }
+    }
+
+    private fun onCreateGroup(name: String) {
+        val state = _uiState.value
+        val uris = state.actionTargetUris
+        if (uris.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val group = createGroupUseCase(name, uris, state.lastSearchedFaceCount)
+                _uiState.update {
+                    it.copy(showCreateGroupSheet = false, matchSelectionMode = false, selectedMatchUris = emptySet())
+                }
+                _uiEffect.emit(PersonAlbumContract.UiEffect.GroupSaved(group.name, isNew = true))
+            } catch (e: Exception) {
+                _uiState.update { it.copy(userMessage = e.message ?: "Couldn't save the group.") }
+            }
+        }
+    }
+
+    private fun onAddToExistingGroup(groupId: String) {
+        val state = _uiState.value
+        val uris = state.actionTargetUris
+        if (uris.isEmpty()) return
+        val groupName = state.existingGroups.firstOrNull { it.id == groupId }?.name ?: return
+        viewModelScope.launch {
+            try {
+                addPhotosToGroupUseCase(groupId, uris, state.lastSearchedFaceCount)
+                _uiState.update {
+                    it.copy(showCreateGroupSheet = false, matchSelectionMode = false, selectedMatchUris = emptySet())
+                }
+                _uiEffect.emit(PersonAlbumContract.UiEffect.GroupSaved(groupName, isNew = false))
+            } catch (e: Exception) {
+                _uiState.update { it.copy(userMessage = e.message ?: "Couldn't add to the group.") }
             }
         }
     }
