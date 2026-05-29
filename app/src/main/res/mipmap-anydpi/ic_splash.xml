@@ -1,0 +1,89 @@
+<!--
+    Splash icon FALLBACK for API 24/25 (adaptive-icon is API 26+ only; minSdk = 24).
+    Bakes the black canvas, violet radial glow, and the Groupify mark into one vector
+    so @mipmap/ic_splash always resolves. Geometry/colors are identical to the v26
+    background + foreground layers combined, so the look matches where the platform
+    doesn't circle-clip. On API 26+ the mipmap-anydpi-v26 adaptive icon overrides this.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="432dp"
+    android:height="432dp"
+    android:viewportWidth="432"
+    android:viewportHeight="432">
+
+    <!-- solid black canvas -->
+    <path
+        android:pathData="M0,0 H432 V432 H0 Z"
+        android:fillColor="#000000" />
+
+    <!-- violet radial glow -->
+    <path android:pathData="M0,216 A216,216 0 1 1 432,216 A216,216 0 1 1 0,216 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="216"
+                android:centerY="216"
+                android:gradientRadius="216">
+                <item
+                    android:offset="0.0"
+                    android:color="#597C5CE6" />
+                <item
+                    android:offset="0.65"
+                    android:color="#007C5CE6" />
+                <item
+                    android:offset="1.0"
+                    android:color="#007C5CE6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- brand mark -->
+    <group
+        android:translateX="120"
+        android:translateY="120"
+        android:scaleX="2"
+        android:scaleY="2">
+
+        <!-- back-left card, rotated -12° about (34,46) -->
+        <group
+            android:rotation="-12"
+            android:pivotX="34"
+            android:pivotY="46">
+            <path
+                android:pathData="M24,22 H44 A14,14 0 0 1 58,36 V56 A14,14 0 0 1 44,70 H24 A14,14 0 0 1 10,56 V36 A14,14 0 0 1 24,22 Z"
+                android:fillColor="#2EFFFFFF"
+                android:strokeColor="#80FFFFFF"
+                android:strokeWidth="1.5" />
+        </group>
+
+        <!-- back-right card, rotated 12° about (62,46) -->
+        <group
+            android:rotation="12"
+            android:pivotX="62"
+            android:pivotY="46">
+            <path
+                android:pathData="M52,22 H72 A14,14 0 0 1 86,36 V56 A14,14 0 0 1 72,70 H52 A14,14 0 0 1 38,56 V36 A14,14 0 0 1 52,22 Z"
+                android:fillColor="#2EFFFFFF"
+                android:strokeColor="#80FFFFFF"
+                android:strokeWidth="1.5" />
+        </group>
+
+        <!-- front white card -->
+        <path
+            android:pathData="M38,14 H58 A14,14 0 0 1 72,28 V48 A14,14 0 0 1 58,62 H38 A14,14 0 0 1 24,48 V28 A14,14 0 0 1 38,14 Z"
+            android:fillColor="#FFFFFF" />
+
+        <!-- violet eye dot -->
+        <path
+            android:pathData="M42,34 A6,6 0 1 1 54,34 A6,6 0 1 1 42,34 Z"
+            android:fillColor="#7C5CE6" />
+
+        <!-- violet smile -->
+        <path
+            android:pathData="M34,50 Q48,62 62,50"
+            android:strokeColor="#7C5CE6"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

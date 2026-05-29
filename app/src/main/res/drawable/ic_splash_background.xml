@@ -1,0 +1,39 @@
+<!--
+    Splash icon BACKGROUND layer — pure black canvas + violet radial glow.
+    Hand-converted from docs/splash/ic_splash_background.svg (viewBox 0 0 432 432).
+    Glow: radial gradient centered in the 432x432 canvas, #7C5CE6 fading from
+    0.35 alpha (#597C5CE6) to 0 (#007C5CE6) at 65% and 100%.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="432dp"
+    android:height="432dp"
+    android:viewportWidth="432"
+    android:viewportHeight="432">
+
+    <!-- solid black canvas -->
+    <path
+        android:pathData="M0,0 H432 V432 H0 Z"
+        android:fillColor="#000000" />
+
+    <!-- violet radial glow -->
+    <path android:pathData="M0,216 A216,216 0 1 1 432,216 A216,216 0 1 1 0,216 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="216"
+                android:centerY="216"
+                android:gradientRadius="216">
+                <item
+                    android:offset="0.0"
+                    android:color="#597C5CE6" />
+                <item
+                    android:offset="0.65"
+                    android:color="#007C5CE6" />
+                <item
+                    android:offset="1.0"
+                    android:color="#007C5CE6" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

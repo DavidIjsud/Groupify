@@ -1,0 +1,62 @@
+<!--
+    Splash icon FOREGROUND layer — the Groupify brand mark.
+    Hand-converted from docs/splash/ic_splash_foreground.svg (viewBox 0 0 432 432).
+    The SVG's outer transform="translate(120,120) scale(2)" becomes the outer <group>;
+    the two ±12° back cards become rotated nested <group>s; rounded rects/circle are
+    expressed as <path> data. Colors with SVG alpha are baked into 8-digit ARGB:
+    rgba(255,255,255,0.18)=#2EFFFFFF, rgba(255,255,255,0.5)=#80FFFFFF.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="432dp"
+    android:height="432dp"
+    android:viewportWidth="432"
+    android:viewportHeight="432">
+
+    <group
+        android:translateX="120"
+        android:translateY="120"
+        android:scaleX="2"
+        android:scaleY="2">
+
+        <!-- back-left card, rotated -12° about (34,46) -->
+        <group
+            android:rotation="-12"
+            android:pivotX="34"
+            android:pivotY="46">
+            <path
+                android:pathData="M24,22 H44 A14,14 0 0 1 58,36 V56 A14,14 0 0 1 44,70 H24 A14,14 0 0 1 10,56 V36 A14,14 0 0 1 24,22 Z"
+                android:fillColor="#2EFFFFFF"
+                android:strokeColor="#80FFFFFF"
+                android:strokeWidth="1.5" />
+        </group>
+
+        <!-- back-right card, rotated 12° about (62,46) -->
+        <group
+            android:rotation="12"
+            android:pivotX="62"
+            android:pivotY="46">
+            <path
+                android:pathData="M52,22 H72 A14,14 0 0 1 86,36 V56 A14,14 0 0 1 72,70 H52 A14,14 0 0 1 38,56 V36 A14,14 0 0 1 52,22 Z"
+                android:fillColor="#2EFFFFFF"
+                android:strokeColor="#80FFFFFF"
+                android:strokeWidth="1.5" />
+        </group>
+
+        <!-- front white card -->
+        <path
+            android:pathData="M38,14 H58 A14,14 0 0 1 72,28 V48 A14,14 0 0 1 58,62 H38 A14,14 0 0 1 24,48 V28 A14,14 0 0 1 38,14 Z"
+            android:fillColor="#FFFFFF" />
+
+        <!-- violet eye dot -->
+        <path
+            android:pathData="M42,34 A6,6 0 1 1 54,34 A6,6 0 1 1 42,34 Z"
+            android:fillColor="#7C5CE6" />
+
+        <!-- violet smile -->
+        <path
+            android:pathData="M34,50 Q48,62 62,50"
+            android:strokeColor="#7C5CE6"
+            android:strokeWidth="3.5"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

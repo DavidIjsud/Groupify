@@ -8,16 +8,14 @@
         postSplashScreenTheme hands off to Theme.Groupify after installSplashScreen() exits.
     -->
     <style name="Theme.Groupify.Splash" parent="Theme.SplashScreen">
-        <!-- Dark canvas matching the app's background -->
-        <item name="windowSplashScreenBackground">#0E0E0E</item>
-        <!-- Centered logo — place groupify_splash_logo.png in drawable-nodpi/ -->
-        <item name="windowSplashScreenAnimatedIcon">@drawable/groupify_splash_logo</item>
+        <!-- Pure black canvas behind the splash icon -->
+        <item name="windowSplashScreenBackground">#000000</item>
         <!--
-            On Android 12+ the icon is rendered inside an adaptive-icon circle.
-            Setting this to the same dark colour makes the circle invisible so the
-            logo appears directly on the background with no badge or ring.
+            Centered adaptive splash icon. The violet glow lives in the icon's
+            background layer (ic_splash_background) and the brand mark in the
+            foreground layer (ic_splash_foreground) — see mipmap/ic_splash.
         -->
-        <item name="windowSplashScreenIconBackgroundColor">#0E0E0E</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_splash</item>
         <!-- Theme applied to the activity once the splash is dismissed -->
         <item name="postSplashScreenTheme">@style/Theme.Groupify</item>
     </style>

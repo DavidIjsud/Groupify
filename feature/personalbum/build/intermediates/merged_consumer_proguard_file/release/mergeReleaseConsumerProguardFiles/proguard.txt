@@ -1,2 +1,4 @@
 -keep,allowobfuscation,allowshrinking class com.palmyrasoft.groupify.feature.personalbum.presentation.PersonAlbumViewModel
 -keep,allowobfuscation,allowshrinking class com.palmyrasoft.groupify.feature.personalbum.presentation.PersonAlbumViewModel
+-keep,allowobfuscation,allowshrinking class com.palmyrasoft.groupify.feature.personalbum.presentation.groups.GroupsViewModel
+-keep,allowobfuscation,allowshrinking class com.palmyrasoft.groupify.feature.personalbum.presentation.groups.GroupsViewModel
