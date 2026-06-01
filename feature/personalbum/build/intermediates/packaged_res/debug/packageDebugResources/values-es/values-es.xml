@@ -101,4 +101,9 @@
     <string name="photomatch_subtitle">Encuentra fotos similares al instante</string>
     <string name="photomatch_tap_to_change_photo">Toca para cambiar la foto</string>
     <string name="photomatch_tap_to_upload_photo">Toca para subir una foto</string>
+    <string name="search_btn_search_photos">Buscar fotos</string>
+    <string name="search_by_text_hint">Busca imágenes que contengan…</string>
+    <string name="search_by_text_title">Buscar por texto</string>
+    <string name="search_mode_faces">Rostros</string>
+    <string name="search_mode_text">Texto</string>
 </resources>

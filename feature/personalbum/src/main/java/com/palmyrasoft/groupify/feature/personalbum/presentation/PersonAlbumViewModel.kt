@@ -8,12 +8,14 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
+import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoTextRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.AddPhotosToGroupUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.BuildQueryFaceThumbnailsUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.CreateGroupUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.GetGroupsUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByTextUseCase
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.GroupUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.MatchUiModel
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFaceUiModel
@@ -40,9 +42,11 @@ private const val DEFAULT_MATCH_THRESHOLD = 0.60f
 class PersonAlbumViewModel @Inject constructor(
     private val workManager: WorkManager,
     private val searchByPhotoUseCase: SearchByPhotoUseCase,
+    private val searchByTextUseCase: SearchByTextUseCase,
     private val detectQueryFacesUseCase: DetectQueryFacesUseCase,
     private val buildQueryFaceThumbnailsUseCase: BuildQueryFaceThumbnailsUseCase,
     private val faceIndexRepository: FaceIndexRepository,
+    private val photoTextRepository: PhotoTextRepository,
     private val onboardingPrefs: IndexingOnboardingPrefs,
     private val getGroupsUseCase: GetGroupsUseCase,
     private val createGroupUseCase: CreateGroupUseCase,
@@ -77,6 +81,9 @@ class PersonAlbumViewModel @Inject constructor(
 
     fun onEvent(event: PersonAlbumContract.UiEvent) {
         when (event) {
+            is PersonAlbumContract.UiEvent.SwitchMode -> onSwitchMode(event.mode)
+            is PersonAlbumContract.UiEvent.UpdateTextQuery -> _uiState.update { it.copy(textQuery = event.query) }
+            is PersonAlbumContract.UiEvent.RunTextSearch -> onRunTextSearch()
             is PersonAlbumContract.UiEvent.PickQueryPhoto -> onPickQueryPhoto(event.uri)
             is PersonAlbumContract.UiEvent.StartDetection -> onStartDetection()
             is PersonAlbumContract.UiEvent.ShareMatches -> onShareMatches()
@@ -99,6 +106,21 @@ class PersonAlbumViewModel @Inject constructor(
 
     fun onPermissionDenied() {
         _uiState.update { it.copy(userMessage = "Storage permission is required to access your photos.") }
+    }
+
+    private fun onSwitchMode(mode: PersonAlbumContract.SearchMode) {
+        if (_uiState.value.searchMode == mode) return
+        // Switching modes clears results/selection so the grid never shows stale matches
+        // from the other mode.
+        _uiState.update {
+            it.copy(
+                searchMode = mode,
+                matches = emptyList(),
+                userMessage = null,
+                matchSelectionMode = false,
+                selectedMatchUris = emptySet(),
+            )
+        }
     }
 
     private fun onPickQueryPhoto(uri: String) {
@@ -234,8 +256,88 @@ class PersonAlbumViewModel @Inject constructor(
     private fun onConfirmIndexingOnboarding() {
         onboardingPrefs.markOnboardingSeen()
         _uiState.update { it.copy(showIndexingOnboardingDialog = false) }
-        // Resume the detection flow now that the user has acknowledged the dialog.
-        onStartDetection()
+        // Resume whichever flow triggered the dialog now that the user has acknowledged it.
+        if (_uiState.value.searchMode == PersonAlbumContract.SearchMode.TEXT) {
+            onRunTextSearch()
+        } else {
+            onStartDetection()
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Text search flow
+    // ---------------------------------------------------------------------------
+
+    private fun onRunTextSearch() {
+        val query = _uiState.value.textQuery.trim()
+        if (query.isEmpty()) {
+            _uiState.update { it.copy(userMessage = "Enter text to search for.") }
+            return
+        }
+        if (_uiState.value.isPreparingGallery || _uiState.value.isDetecting) return
+
+        viewModelScope.launch {
+            // First-run gate: if nothing is indexed yet and the user hasn't seen the explanation,
+            // show the same onboarding dialog the face flow uses.
+            val indexedCount = photoTextRepository.observeCount().first()
+            if (indexedCount == 0 && !onboardingPrefs.hasSeenOnboarding()) {
+                _uiState.update { it.copy(showIndexingOnboardingDialog = true) }
+                return@launch
+            }
+            runTextDetection(query)
+        }
+    }
+
+    private suspend fun runTextDetection(query: String) {
+        try {
+            // Reuse the face-indexing worker (it now also populates the text index) so the
+            // search runs against an up-to-date gallery. Same gate as runDetection().
+            val indexedCount = photoTextRepository.observeCount().first()
+            val activeWork = workManager
+                .getWorkInfosForUniqueWorkFlow(IndexFacesWorker.WORK_NAME)
+                .first()
+            val isIndexing = activeWork.any {
+                it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+            }
+
+            if (indexedCount == 0 || isIndexing) {
+                _uiState.update {
+                    it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
+                }
+
+                val succeeded = awaitIndexing()
+
+                _uiState.update { it.copy(isPreparingGallery = false) }
+                if (!succeeded) {
+                    _uiState.update { it.copy(userMessage = "Photo indexing failed. Please try again.") }
+                    return
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDetecting = true,
+                    matches = emptyList(),
+                    matchSelectionMode = false,
+                    selectedMatchUris = emptySet(),
+                    // Text searches aren't face-based; groups saved from text results store 0 faces.
+                    lastSearchedFaceCount = 0,
+                )
+            }
+
+            val results = searchByTextUseCase(query)
+            if (results.isEmpty()) {
+                _uiState.update { it.copy(userMessage = "No photos contain that text.") }
+            }
+            val matchUiModels = results.map { match ->
+                MatchUiModel(uri = match.uri, showScore = false)
+            }
+            _uiState.update { it.copy(matches = matchUiModels) }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(userMessage = e.message ?: "Text search failed. Please try again.") }
+        } finally {
+            _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
+        }
     }
 
     private suspend fun runDetection(

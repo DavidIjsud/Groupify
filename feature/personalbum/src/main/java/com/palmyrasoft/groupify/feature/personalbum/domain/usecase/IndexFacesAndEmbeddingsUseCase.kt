@@ -6,9 +6,12 @@ import android.util.Log
 import com.palmyrasoft.groupify.feature.personalbum.BuildConfig
 import com.palmyrasoft.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.palmyrasoft.groupify.feature.personalbum.domain.model.Face
+import com.palmyrasoft.groupify.feature.personalbum.domain.model.PhotoText
 import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.FaceEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.TextRecognizer
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoRepository
+import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoTextRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -19,6 +22,8 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
     private val faceIndexRepository: FaceIndexRepository,
     private val faceDetector: FaceDetector,
     private val faceEmbedder: FaceEmbedder,
+    private val textRecognizer: TextRecognizer,
+    private val photoTextRepository: PhotoTextRepository,
 ) {
     operator fun invoke(): Flow<IndexingProgress> = flow {
         val allPhotos = photoRepository.getAll().first()
@@ -35,6 +40,7 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
         // Progress is still emitted per photo so the UI ticks smoothly even during large
         // batches.  Only the DB flush is deferred.
         val faceBatch = mutableListOf<Face>()
+        val textBatch = mutableListOf<PhotoText>()
         val indexedIdsBatch = mutableListOf<String>()
 
         unindexed.forEachIndexed { index, photo ->
@@ -67,6 +73,25 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
                     }
                 }
 
+                // OCR the same photo so it's searchable by the text it visually contains
+                // (signs, screenshots, receipts…). A text-recognition failure must not abort
+                // the photo — the faces above are already indexed.
+                try {
+                    val tOcr = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
+                    val recognizedText = textRecognizer.recognizeText(photo.uri)
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "recognizeText [${photo.id}] → ${recognizedText.length} char(s) in " +
+                            "${SystemClock.elapsedRealtime() - tOcr}ms")
+                    }
+                    if (recognizedText.isNotBlank()) {
+                        textBatch.add(
+                            PhotoText(photoId = photo.id, uri = photo.uri, text = recognizedText)
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Skip text for this photo; faces are unaffected.
+                }
+
                 // Photo processed successfully — queue it for the batched markIndexed call.
                 indexedIdsBatch.add(photo.id)
             } catch (e: Exception) {
@@ -81,6 +106,11 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
                 if (faceBatch.isNotEmpty()) {
                     faceIndexRepository.saveAll(faceBatch)
                     faceBatch.clear()
+                }
+
+                if (textBatch.isNotEmpty()) {
+                    photoTextRepository.saveAll(textBatch)
+                    textBatch.clear()
                 }
 
                 val timestamp = System.currentTimeMillis()

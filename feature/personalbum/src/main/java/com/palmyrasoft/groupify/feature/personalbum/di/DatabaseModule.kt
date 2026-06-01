@@ -8,6 +8,7 @@ import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.FaceEmbedding
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.GroupDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PersonDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PhotoDao
+import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PhotoTextDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -41,4 +42,7 @@ object DatabaseModule {
 
     @Provides
     fun provideGroupDao(db: PersonAlbumDatabase): GroupDao = db.groupDao()
+
+    @Provides
+    fun providePhotoTextDao(db: PersonAlbumDatabase): PhotoTextDao = db.photoTextDao()
 }

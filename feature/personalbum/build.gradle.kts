@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     // ML
     implementation(libs.mlkit.face.detection)
+    implementation(libs.mlkit.text.recognition)
     implementation(libs.tflite.interpreter)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)

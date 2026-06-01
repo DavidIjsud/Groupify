@@ -34,13 +34,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,6 +56,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -74,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.palmyrasoft.groupify.feature.personalbum.R
@@ -199,13 +206,20 @@ fun PersonAlbumScreen(
     // Index is computed from the same conditional items that precede it in the LazyColumn.
     LaunchedEffect(uiState.matches) {
         if (uiState.matches.isEmpty()) return@LaunchedEffect
-        var targetIndex = 3 // Spacer(0) + Header(1) + QueryPhotoCard(2)
-        if (uiState.queryFaces.isNotEmpty()) targetIndex++ // FaceSelectionSection
-        targetIndex++ // Camera button
+        // Count the items that precede the results header so we can scroll to it. The layout
+        // differs by search mode, so the math mirrors the LazyColumn structure below.
+        var targetIndex = 3 // Spacer(0) + Header(1) + SearchModeToggle(2)
+        if (uiState.searchMode == PersonAlbumContract.SearchMode.FACES) {
+            targetIndex++ // QueryPhotoCard
+            if (uiState.queryFaces.isNotEmpty()) targetIndex++ // FaceSelectionSection
+            targetIndex++ // Camera button
+        } else {
+            targetIndex++ // SearchByTextCard
+        }
         if (uiState.userMessage != null) targetIndex++ // error row
         if (uiState.isPreparingGallery) targetIndex++ // progress indicator
-        targetIndex++ // Start Detection button
-        // targetIndex now points to the "N matches found" header item
+        targetIndex++ // primary action button
+        // targetIndex now points to the results header item
         listState.animateScrollToItem(targetIndex)
     }
 
@@ -242,47 +256,68 @@ fun PersonAlbumScreen(
                 }
             }
 
-            // Query photo preview card with face bounding-box overlay
+            // Faces / Text segmented toggle
             item {
-                QueryPhotoCard(
-                    uiState = uiState,
-                    busy = busy,
-                    onTap = { launchGallery() },
+                SearchModeToggle(
+                    selected = uiState.searchMode,
+                    enabled = !busy,
+                    onSelect = { viewModel.onEvent(PersonAlbumContract.UiEvent.SwitchMode(it)) },
                 )
             }
 
-            // Face chips — visible once faces are detected in the query photo
-            if (uiState.queryFaces.isNotEmpty()) {
+            if (uiState.searchMode == PersonAlbumContract.SearchMode.FACES) {
+                // Query photo preview card with face bounding-box overlay
                 item {
-                    FaceSelectionSection(
+                    QueryPhotoCard(
                         uiState = uiState,
-                        onToggle = { id -> viewModel.onEvent(PersonAlbumContract.UiEvent.ToggleFaceSelection(id)) },
-                        onSelectAll = { viewModel.onEvent(PersonAlbumContract.UiEvent.SelectAllFaces) },
-                        onClear = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearFaceSelection) },
+                        busy = busy,
+                        onTap = { launchGallery() },
                     )
                 }
-            }
 
-            // Take a Photo (camera) button
-            item {
-                OutlinedButton(
-                    onClick = { launchCamera() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !busy,
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, if (!busy) AccentPurple else TextSecondary),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = AccentPurple,
-                        disabledContentColor = TextSecondary,
-                    ),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CameraAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                // Face chips — visible once faces are detected in the query photo
+                if (uiState.queryFaces.isNotEmpty()) {
+                    item {
+                        FaceSelectionSection(
+                            uiState = uiState,
+                            onToggle = { id -> viewModel.onEvent(PersonAlbumContract.UiEvent.ToggleFaceSelection(id)) },
+                            onSelectAll = { viewModel.onEvent(PersonAlbumContract.UiEvent.SelectAllFaces) },
+                            onClear = { viewModel.onEvent(PersonAlbumContract.UiEvent.ClearFaceSelection) },
+                        )
+                    }
+                }
+
+                // Take a Photo (camera) button
+                item {
+                    OutlinedButton(
+                        onClick = { launchCamera() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, if (!busy) AccentPurple else TextSecondary),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AccentPurple,
+                            disabledContentColor = TextSecondary,
+                        ),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.photomatch_btn_take_photo))
+                    }
+                }
+            } else {
+                // Search-by-text card (mirrors the iOS Text tab)
+                item {
+                    SearchByTextCard(
+                        query = uiState.textQuery,
+                        enabled = !busy,
+                        onQueryChange = { viewModel.onEvent(PersonAlbumContract.UiEvent.UpdateTextQuery(it)) },
+                        onSearch = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch) },
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.photomatch_btn_take_photo))
                 }
             }
 
@@ -367,46 +402,89 @@ fun PersonAlbumScreen(
                 }
             }
 
-            // Start Detection button
+            // Primary action button — Start Detection (Faces) or Search Photos (Text)
             item {
-                val hasSelectedFaces = uiState.queryFaces.any { it.isSelected }
-                val startEnabled = uiState.selectedQueryPhotoUri != null &&
-                    hasSelectedFaces &&
-                    !busy &&
-                    !uiState.isFaceLoading
+                if (uiState.searchMode == PersonAlbumContract.SearchMode.FACES) {
+                    val hasSelectedFaces = uiState.queryFaces.any { it.isSelected }
+                    val startEnabled = uiState.selectedQueryPhotoUri != null &&
+                        hasSelectedFaces &&
+                        !busy &&
+                        !uiState.isFaceLoading
 
-                Button(
-                    onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartDetection) },
-                    enabled = startEnabled,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentPurple,
-                        contentColor = Color.White,
-                        disabledContainerColor = Color(0xFF2C2C2E),
-                        disabledContentColor = TextSecondary,
-                    ),
-                ) {
-                    if (busy || uiState.isFaceLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
+                    Button(
+                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.StartDetection) },
+                        enabled = startEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentPurple,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFF2C2C2E),
+                            disabledContentColor = TextSecondary,
+                        ),
+                    ) {
+                        if (busy || uiState.isFaceLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                        Text(
+                            text = when {
+                                uiState.isFaceLoading -> stringResource(R.string.photomatch_detecting_faces)
+                                uiState.isPreparingGallery -> stringResource(R.string.photomatch_preparing_gallery)
+                                uiState.isDetecting -> stringResource(R.string.photomatch_detecting)
+                                else -> stringResource(R.string.photomatch_btn_start_detection)
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
                     }
-                    Text(
-                        text = when {
-                            uiState.isFaceLoading -> stringResource(R.string.photomatch_detecting_faces)
-                            uiState.isPreparingGallery -> stringResource(R.string.photomatch_preparing_gallery)
-                            uiState.isDetecting -> stringResource(R.string.photomatch_detecting)
-                            else -> stringResource(R.string.photomatch_btn_start_detection)
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
+                } else {
+                    val searchEnabled = uiState.textQuery.isNotBlank() && !busy
+
+                    Button(
+                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch) },
+                        enabled = searchEnabled,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AccentPurple,
+                            contentColor = Color.White,
+                            disabledContainerColor = Color(0xFF2C2C2E),
+                            disabledContentColor = TextSecondary,
+                        ),
+                    ) {
+                        if (busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = when {
+                                uiState.isPreparingGallery -> stringResource(R.string.photomatch_preparing_gallery)
+                                uiState.isDetecting -> stringResource(R.string.photomatch_detecting)
+                                else -> stringResource(R.string.search_btn_search_photos)
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
             }
 
@@ -655,6 +733,134 @@ private fun IndexingOnboardingDialog(onConfirm: () -> Unit) {
         titleContentColor = Color.White,
         textContentColor = TextSecondary,
     )
+}
+
+// ---------------------------------------------------------------------------
+// Faces / Text segmented toggle
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun SearchModeToggle(
+    selected: PersonAlbumContract.SearchMode,
+    enabled: Boolean,
+    onSelect: (PersonAlbumContract.SearchMode) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardBackground)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        SearchModeSegment(
+            icon = Icons.Filled.Face,
+            label = stringResource(R.string.search_mode_faces),
+            active = selected == PersonAlbumContract.SearchMode.FACES,
+            enabled = enabled,
+            onClick = { onSelect(PersonAlbumContract.SearchMode.FACES) },
+            modifier = Modifier.weight(1f),
+        )
+        SearchModeSegment(
+            icon = Icons.Filled.Search,
+            label = stringResource(R.string.search_mode_text),
+            active = selected == PersonAlbumContract.SearchMode.TEXT,
+            enabled = enabled,
+            onClick = { onSelect(PersonAlbumContract.SearchMode.TEXT) },
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun SearchModeSegment(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    active: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val contentColor = if (active) Color.White else TextSecondary
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (active) AccentPurple else Color.Transparent)
+            .clickable(enabled = enabled) { onClick() }
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            color = contentColor,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Search-by-text card — title + input field (Text tab)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun SearchByTextCard(
+    query: String,
+    enabled: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.search_by_text_title),
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            enabled = enabled,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_by_text_hint),
+                    color = TextSecondary,
+                )
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = AccentPurple,
+                focusedBorderColor = AccentPurple,
+                unfocusedBorderColor = Color(0xFF3D3D3D),
+                focusedContainerColor = DarkBackground,
+                unfocusedContainerColor = DarkBackground,
+                disabledContainerColor = DarkBackground,
+            ),
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -975,21 +1181,23 @@ private fun MatchCard(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
         )
-        // Score badge (always visible)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(6.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xBB000000))
-                .padding(horizontal = 6.dp, vertical = 3.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.photomatch_percent_format, match.scorePercent),
-                color = Color.White,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-            )
+        // Score badge — only for face matches (text matches have no similarity score)
+        if (match.showScore) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xBB000000))
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.photomatch_percent_format, match.scorePercent),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
         // Selection overlay
         if (isSelectionMode) {

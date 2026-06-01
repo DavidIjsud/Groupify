@@ -4,6 +4,13 @@
     <string name="photomatch_app_title">PhotoMatch</string>
     <string name="photomatch_subtitle">Encuentra fotos similares al instante</string>
 
+    <!-- Conmutador de modo de búsqueda (Rostros / Texto) -->
+    <string name="search_mode_faces">Rostros</string>
+    <string name="search_mode_text">Texto</string>
+    <string name="search_by_text_title">Buscar por texto</string>
+    <string name="search_by_text_hint">Busca imágenes que contengan…</string>
+    <string name="search_btn_search_photos">Buscar fotos</string>
+
     <!-- Buttons -->
     <string name="photomatch_btn_take_photo">Tomar una foto</string>
     <string name="photomatch_btn_grant_permission">Permitir</string>
