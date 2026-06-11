@@ -174,6 +174,18 @@ fun PersonAlbumScreen(
         }
     }
 
+    // Text search needs gallery access to index/scan photos. Request permission up-front the
+    // first time the user searches, instead of running against an empty gallery and surfacing
+    // an error row with a "Grant" fallback button.
+    fun runTextSearch() {
+        if (hasPermission) {
+            viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch)
+        } else {
+            pendingAction = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch) }
+            permissionLauncher.launch(permission)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
@@ -316,7 +328,7 @@ fun PersonAlbumScreen(
                         query = uiState.textQuery,
                         enabled = !busy,
                         onQueryChange = { viewModel.onEvent(PersonAlbumContract.UiEvent.UpdateTextQuery(it)) },
-                        onSearch = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch) },
+                        onSearch = { runTextSearch() },
                     )
                 }
             }
@@ -448,7 +460,7 @@ fun PersonAlbumScreen(
                     val searchEnabled = uiState.textQuery.isNotBlank() && !busy
 
                     Button(
-                        onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunTextSearch) },
+                        onClick = { runTextSearch() },
                         enabled = searchEnabled,
                         modifier = Modifier
                             .fillMaxWidth()
