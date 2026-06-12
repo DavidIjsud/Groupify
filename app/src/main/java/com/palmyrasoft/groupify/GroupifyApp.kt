@@ -6,9 +6,11 @@ import android.provider.MediaStore
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.google.firebase.messaging.FirebaseMessaging
 import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
 import com.palmyrasoft.groupify.feature.personalbum.workers.IndexFacesWorker
 import com.palmyrasoft.groupify.feature.personalbum.workers.MediaStoreObserver
+import com.palmyrasoft.groupify.messaging.PushNotificationHelper
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
@@ -35,8 +37,20 @@ class GroupifyApp : Application(), Configuration.Provider {
     @Inject
     lateinit var indexingPrefs: IndexingOnboardingPrefs
 
+    /**
+     * Injected purely so its constructor creates the push notification channel at startup —
+     * the channel must exist before any background FCM "notification" message arrives (the SDK
+     * posts those to the channel named by default_notification_channel_id in the manifest).
+     */
+    @Inject
+    lateinit var pushNotificationHelper: PushNotificationHelper
+
     override fun onCreate() {
         super.onCreate() // Hilt injection runs here — @Inject fields are ready after this line.
+
+        // Subscribe to the broadcast topic so the Firebase console / server can reach every
+        // install without tracking individual tokens. Idempotent; runs on a background thread.
+        FirebaseMessaging.getInstance().subscribeToTopic(BROADCAST_TOPIC)
 
         // Only auto-index on launch after the user has completed the first indexing run.
         // On first install this is skipped — the user must explicitly start the search flow,
@@ -60,4 +74,8 @@ class GroupifyApp : Application(), Configuration.Provider {
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
+
+    private companion object {
+        const val BROADCAST_TOPIC = "all"
+    }
 }

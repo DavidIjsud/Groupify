@@ -48,6 +48,23 @@
             android:foregroundServiceType="dataSync"
             tools:node="merge" />
 
+        <!-- Firebase Cloud Messaging: receives push notifications. -->
+        <service
+            android:name=".messaging.GroupifyMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!--
+            Channel the FCM SDK posts background "notification" messages to when the payload
+            doesn't name one. Must match PushNotificationHelper.CHANNEL_ID (created on app start).
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="groupify_push" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
