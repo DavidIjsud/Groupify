@@ -75,7 +75,10 @@ string photomatch_subtitle
 string photomatch_tap_to_change_photo
 string photomatch_tap_to_upload_photo
 string search_btn_search_photos
+string search_by_description_hint
+string search_by_description_title
 string search_by_text_hint
 string search_by_text_title
+string search_mode_description
 string search_mode_faces
 string search_mode_text

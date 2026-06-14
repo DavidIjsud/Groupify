@@ -26,6 +26,6 @@
       applicationId="com.palmyrasoft.groupify.feature.personalbum"
       generatedSourceFolders="build/generated/ksp/release/java:build/generated/ksp/release/kotlin:build/generated/ap_generated_sources/release/out:build/generated/source/buildConfig/release"
       generatedResourceFolders="build/generated/res/resValues/release"
-      desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/a111f86654518d2780ff9120d3ff06e5/transformed/D8BackportedDesugaredMethods.txt">
+      desugaredMethodsFiles="/Users/davidgarcia/.gradle/caches/8.13/transforms/76dd89c4c926d4927d72c34b5bf32978/transformed/D8BackportedDesugaredMethods.txt">
   </artifact>
 </variant>

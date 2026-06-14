@@ -17,6 +17,8 @@ import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PersonDao
 import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PersonDao_Impl
 import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoDao
 import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoDao_Impl
+import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoEmbeddingDao
+import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoEmbeddingDao_Impl
 import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoTextDao
 import com.palmyrasoft.groupify.feature.personalbum.`data`.local.dao.PhotoTextDao_Impl
 import javax.`annotation`.processing.Generated
@@ -59,8 +61,12 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
     PhotoTextDao_Impl(this)
   }
 
+  private val _photoEmbeddingDao: Lazy<PhotoEmbeddingDao> = lazy {
+    PhotoEmbeddingDao_Impl(this)
+  }
+
   protected override fun createOpenDelegate(): RoomOpenDelegate {
-    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(5, "df99df259d02e3331ea4085fae5bfc9c", "0f91f61f40107bbed307878a1dc0d948") {
+    val _openDelegate: RoomOpenDelegate = object : RoomOpenDelegate(6, "a46187fb742129f9ffb0fc348e148098", "81104f065a6003399037582680374971") {
       public override fun createAllTables(connection: SQLiteConnection) {
         connection.execSQL("CREATE TABLE IF NOT EXISTS `photos` (`id` TEXT NOT NULL, `uri` TEXT NOT NULL, `dateTaken` INTEGER NOT NULL, `lastIndexedAt` INTEGER, PRIMARY KEY(`id`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS `face_embeddings` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `photoId` TEXT NOT NULL, `left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `embeddingBlob` BLOB NOT NULL, `createdAt` INTEGER NOT NULL)")
@@ -71,8 +77,9 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
         connection.execSQL("CREATE INDEX IF NOT EXISTS `index_group_photos_groupId` ON `group_photos` (`groupId`)")
         connection.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_group_photos_groupId_photoUri` ON `group_photos` (`groupId`, `photoUri`)")
         connection.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `photo_texts` USING FTS4(`photoId` TEXT NOT NULL, `uri` TEXT NOT NULL, `text` TEXT NOT NULL)")
+        connection.execSQL("CREATE TABLE IF NOT EXISTS `photo_embeddings` (`photoId` TEXT NOT NULL, `uri` TEXT NOT NULL, `embeddingBlob` BLOB NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`photoId`))")
         connection.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'df99df259d02e3331ea4085fae5bfc9c')")
+        connection.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a46187fb742129f9ffb0fc348e148098')")
       }
 
       public override fun dropAllTables(connection: SQLiteConnection) {
@@ -82,6 +89,7 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
         connection.execSQL("DROP TABLE IF EXISTS `groups`")
         connection.execSQL("DROP TABLE IF EXISTS `group_photos`")
         connection.execSQL("DROP TABLE IF EXISTS `photo_texts`")
+        connection.execSQL("DROP TABLE IF EXISTS `photo_embeddings`")
       }
 
       public override fun onCreate(connection: SQLiteConnection) {
@@ -214,6 +222,24 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
               | Found:
               |""".trimMargin() + _existingPhotoTexts)
         }
+        val _columnsPhotoEmbeddings: MutableMap<String, TableInfo.Column> = mutableMapOf()
+        _columnsPhotoEmbeddings.put("photoId", TableInfo.Column("photoId", "TEXT", true, 1, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotoEmbeddings.put("uri", TableInfo.Column("uri", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotoEmbeddings.put("embeddingBlob", TableInfo.Column("embeddingBlob", "BLOB", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        _columnsPhotoEmbeddings.put("createdAt", TableInfo.Column("createdAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY))
+        val _foreignKeysPhotoEmbeddings: MutableSet<TableInfo.ForeignKey> = mutableSetOf()
+        val _indicesPhotoEmbeddings: MutableSet<TableInfo.Index> = mutableSetOf()
+        val _infoPhotoEmbeddings: TableInfo = TableInfo("photo_embeddings", _columnsPhotoEmbeddings, _foreignKeysPhotoEmbeddings, _indicesPhotoEmbeddings)
+        val _existingPhotoEmbeddings: TableInfo = tableInfoRead(connection, "photo_embeddings")
+        if (!_infoPhotoEmbeddings.equals(_existingPhotoEmbeddings)) {
+          return RoomOpenDelegate.ValidationResult(false, """
+              |photo_embeddings(com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PhotoEmbeddingEntity).
+              | Expected:
+              |""".trimMargin() + _infoPhotoEmbeddings + """
+              |
+              | Found:
+              |""".trimMargin() + _existingPhotoEmbeddings)
+        }
         return RoomOpenDelegate.ValidationResult(true, null)
       }
     }
@@ -224,11 +250,11 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
     val _shadowTablesMap: MutableMap<String, String> = mutableMapOf()
     _shadowTablesMap.put("photo_texts", "photo_texts_content")
     val _viewTables: MutableMap<String, Set<String>> = mutableMapOf()
-    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "photos", "face_embeddings", "persons", "groups", "group_photos", "photo_texts")
+    return InvalidationTracker(this, _shadowTablesMap, _viewTables, "photos", "face_embeddings", "persons", "groups", "group_photos", "photo_texts", "photo_embeddings")
   }
 
   public override fun clearAllTables() {
-    super.performClear(true, "photos", "face_embeddings", "persons", "groups", "group_photos", "photo_texts")
+    super.performClear(true, "photos", "face_embeddings", "persons", "groups", "group_photos", "photo_texts", "photo_embeddings")
   }
 
   protected override fun getRequiredTypeConverterClasses(): Map<KClass<*>, List<KClass<*>>> {
@@ -238,6 +264,7 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
     _typeConvertersMap.put(PersonDao::class, PersonDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(GroupDao::class, GroupDao_Impl.getRequiredConverters())
     _typeConvertersMap.put(PhotoTextDao::class, PhotoTextDao_Impl.getRequiredConverters())
+    _typeConvertersMap.put(PhotoEmbeddingDao::class, PhotoEmbeddingDao_Impl.getRequiredConverters())
     return _typeConvertersMap
   }
 
@@ -260,4 +287,6 @@ public class PersonAlbumDatabase_Impl : PersonAlbumDatabase() {
   public override fun groupDao(): GroupDao = _groupDao.value
 
   public override fun photoTextDao(): PhotoTextDao = _photoTextDao.value
+
+  public override fun photoEmbeddingDao(): PhotoEmbeddingDao = _photoEmbeddingDao.value
 }

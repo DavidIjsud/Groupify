@@ -29,6 +29,11 @@
     <string name="photomatch_detecting">Detectando\u2026</string>
     <string name="photomatch_indexing_progress">Indexando fotos\u2026 %1$d / %2$d</string>
 
+    <!-- Di\u00e1logo de incorporaci\u00f3n de la primera indexaci\u00f3n -->
+    <string name="photomatch_onboarding_title">Preparando tu galer\u00eda de fotos</string>
+    <string name="photomatch_onboarding_message">Para ofrecerte resultados m\u00e1s r\u00e1pidos y precisos, Groupify necesita indexar tus fotos la primera vez que usas la b\u00fasqueda por rostros. Esto puede tardar unos minutos seg\u00fan la cantidad de fotos que tengas. Puedes salir o cerrar la app sin problema: el proceso continuar\u00e1 en segundo plano.</string>
+    <string name="photomatch_onboarding_btn_ok">Aceptar</string>
+
     <!-- Query photo card -->
     <string name="photomatch_tap_to_change_photo">Toca para cambiar la foto</string>
     <string name="photomatch_tap_to_upload_photo">Toca para subir una foto</string>

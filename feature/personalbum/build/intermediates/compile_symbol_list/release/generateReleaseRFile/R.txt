@@ -74,7 +74,10 @@ int string photomatch_subtitle 0x0
 int string photomatch_tap_to_change_photo 0x0
 int string photomatch_tap_to_upload_photo 0x0
 int string search_btn_search_photos 0x0
+int string search_by_description_hint 0x0
+int string search_by_description_title 0x0
 int string search_by_text_hint 0x0
 int string search_by_text_title 0x0
+int string search_mode_description 0x0
 int string search_mode_faces 0x0
 int string search_mode_text 0x0

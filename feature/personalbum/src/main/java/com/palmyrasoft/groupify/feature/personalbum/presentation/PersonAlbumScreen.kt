@@ -700,7 +700,10 @@ fun PersonAlbumScreen(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(24.dp),
+                    // Lift above the floating Home/Groups tab bar (64dp tall + 24dp inset ≈ 88dp
+                    // from the bottom). 100dp matches the LazyColumn's bottom contentPadding so the
+                    // FAB clears the bar with a small gap instead of hiding behind it.
+                    .padding(end = 24.dp, bottom = 100.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.End,
             ) {
@@ -715,6 +718,19 @@ fun PersonAlbumScreen(
                             contentDescription = stringResource(R.string.photomatch_cd_dismiss),
                         )
                     }
+                }
+                // Save to Group — mirrors the bottom "Save to Group" button (opens the same sheet,
+                // acts on the current selection or all matches). Secondary styling so the primary
+                // Share FAB below it stays the dominant accent.
+                FloatingActionButton(
+                    onClick = { viewModel.onEvent(PersonAlbumContract.UiEvent.OpenSaveToGroup) },
+                    containerColor = CardBackground,
+                    contentColor = AccentPurple,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CreateNewFolder,
+                        contentDescription = stringResource(R.string.groups_btn_save_to_group),
+                    )
                 }
                 FloatingActionButton(
                     onClick = { viewModel.onEvent(fabShareEvent) },
