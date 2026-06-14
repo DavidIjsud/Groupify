@@ -15,6 +15,7 @@ room = "2.8.4"
 mlkitFaceDetection = "16.1.7"
 mlkitTextRecognition = "16.0.1"
 litert = "1.2.0"
+onnxruntime = "1.20.0"
 exifinterface = "1.4.2"
 coil = "2.7.0"
 workManager = "2.11.2"
@@ -50,6 +51,7 @@ room-compiler = { group = "androidx.room", name = "room-compiler", version.ref =
 mlkit-face-detection = { group = "com.google.mlkit", name = "face-detection", version.ref = "mlkitFaceDetection" }
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 tflite-interpreter = { group = "com.google.ai.edge.litert", name = "litert", version.ref = "litert" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }

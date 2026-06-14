@@ -6,9 +6,12 @@ import android.util.Log
 import com.palmyrasoft.groupify.feature.personalbum.BuildConfig
 import com.palmyrasoft.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.palmyrasoft.groupify.feature.personalbum.domain.model.Face
+import com.palmyrasoft.groupify.feature.personalbum.domain.model.PhotoEmbedding
 import com.palmyrasoft.groupify.feature.personalbum.domain.model.PhotoText
 import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.FaceEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.ImageEmbedder
 import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.TextRecognizer
+import com.palmyrasoft.groupify.feature.personalbum.domain.repository.DescriptionIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoTextRepository
@@ -24,6 +27,8 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
     private val faceEmbedder: FaceEmbedder,
     private val textRecognizer: TextRecognizer,
     private val photoTextRepository: PhotoTextRepository,
+    private val imageEmbedder: ImageEmbedder,
+    private val descriptionIndexRepository: DescriptionIndexRepository,
 ) {
     operator fun invoke(): Flow<IndexingProgress> = flow {
         val allPhotos = photoRepository.getAll().first()
@@ -41,6 +46,7 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
         // batches.  Only the DB flush is deferred.
         val faceBatch = mutableListOf<Face>()
         val textBatch = mutableListOf<PhotoText>()
+        val embeddingBatch = mutableListOf<PhotoEmbedding>()
         val indexedIdsBatch = mutableListOf<String>()
 
         unindexed.forEachIndexed { index, photo ->
@@ -92,6 +98,21 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
                     // Skip text for this photo; faces are unaffected.
                 }
 
+                // CLIP-embed the whole photo so it's searchable by a typed description (scenes,
+                // objects, signs…). Like OCR, an embedding failure must not abort the photo.
+                try {
+                    val tEmbed = if (BuildConfig.DEBUG) SystemClock.elapsedRealtime() else 0L
+                    val embedding = imageEmbedder.embedImage(photo.uri)
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "embedImage [${photo.id}] in ${SystemClock.elapsedRealtime() - tEmbed}ms")
+                    }
+                    embeddingBatch.add(
+                        PhotoEmbedding(photoId = photo.id, uri = photo.uri, embedding = embedding)
+                    )
+                } catch (e: Exception) {
+                    // Skip the description embedding for this photo; faces/text are unaffected.
+                }
+
                 // Photo processed successfully — queue it for the batched markIndexed call.
                 indexedIdsBatch.add(photo.id)
             } catch (e: Exception) {
@@ -111,6 +132,11 @@ class IndexFacesAndEmbeddingsUseCase @Inject constructor(
                 if (textBatch.isNotEmpty()) {
                     photoTextRepository.saveAll(textBatch)
                     textBatch.clear()
+                }
+
+                if (embeddingBatch.isNotEmpty()) {
+                    descriptionIndexRepository.saveAll(embeddingBatch)
+                    embeddingBatch.clear()
                 }
 
                 val timestamp = System.currentTimeMillis()

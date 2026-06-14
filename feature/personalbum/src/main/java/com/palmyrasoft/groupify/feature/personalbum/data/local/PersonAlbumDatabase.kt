@@ -7,11 +7,13 @@ import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.FaceEmbedding
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.GroupDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PersonDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PhotoDao
+import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PhotoEmbeddingDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.dao.PhotoTextDao
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.FaceEmbeddingEntity
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.GroupEntity
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.GroupPhotoEntity
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PersonEntity
+import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PhotoEmbeddingEntity
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PhotoEntity
 import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PhotoTextEntity
 
@@ -23,8 +25,9 @@ import com.palmyrasoft.groupify.feature.personalbum.data.local.entity.PhotoTextE
         GroupEntity::class,
         GroupPhotoEntity::class,
         PhotoTextEntity::class,
+        PhotoEmbeddingEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class PersonAlbumDatabase : RoomDatabase() {
@@ -33,4 +36,5 @@ abstract class PersonAlbumDatabase : RoomDatabase() {
     abstract fun personDao(): PersonDao
     abstract fun groupDao(): GroupDao
     abstract fun photoTextDao(): PhotoTextDao
+    abstract fun photoEmbeddingDao(): PhotoEmbeddingDao
 }

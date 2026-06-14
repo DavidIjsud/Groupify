@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.palmyrasoft.groupify.feature.personalbum.data.prefs.IndexingOnboardingPrefs
+import com.palmyrasoft.groupify.feature.personalbum.domain.repository.DescriptionIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PhotoTextRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.AddPhotosToGroupUseCase
@@ -14,6 +15,7 @@ import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.BuildQueryFac
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.CreateGroupUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.DetectQueryFacesUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.GetGroupsUseCase
+import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByDescriptionUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByPhotoUseCase
 import com.palmyrasoft.groupify.feature.personalbum.domain.usecase.SearchByTextUseCase
 import com.palmyrasoft.groupify.feature.personalbum.presentation.model.GroupUiModel
@@ -43,10 +45,12 @@ class PersonAlbumViewModel @Inject constructor(
     private val workManager: WorkManager,
     private val searchByPhotoUseCase: SearchByPhotoUseCase,
     private val searchByTextUseCase: SearchByTextUseCase,
+    private val searchByDescriptionUseCase: SearchByDescriptionUseCase,
     private val detectQueryFacesUseCase: DetectQueryFacesUseCase,
     private val buildQueryFaceThumbnailsUseCase: BuildQueryFaceThumbnailsUseCase,
     private val faceIndexRepository: FaceIndexRepository,
     private val photoTextRepository: PhotoTextRepository,
+    private val descriptionIndexRepository: DescriptionIndexRepository,
     private val onboardingPrefs: IndexingOnboardingPrefs,
     private val getGroupsUseCase: GetGroupsUseCase,
     private val createGroupUseCase: CreateGroupUseCase,
@@ -84,6 +88,8 @@ class PersonAlbumViewModel @Inject constructor(
             is PersonAlbumContract.UiEvent.SwitchMode -> onSwitchMode(event.mode)
             is PersonAlbumContract.UiEvent.UpdateTextQuery -> _uiState.update { it.copy(textQuery = event.query) }
             is PersonAlbumContract.UiEvent.RunTextSearch -> onRunTextSearch()
+            is PersonAlbumContract.UiEvent.UpdateDescriptionQuery -> _uiState.update { it.copy(descriptionQuery = event.query) }
+            is PersonAlbumContract.UiEvent.RunDescriptionSearch -> onRunDescriptionSearch()
             is PersonAlbumContract.UiEvent.PickQueryPhoto -> onPickQueryPhoto(event.uri)
             is PersonAlbumContract.UiEvent.StartDetection -> onStartDetection()
             is PersonAlbumContract.UiEvent.ShareMatches -> onShareMatches()
@@ -257,10 +263,10 @@ class PersonAlbumViewModel @Inject constructor(
         onboardingPrefs.markOnboardingSeen()
         _uiState.update { it.copy(showIndexingOnboardingDialog = false) }
         // Resume whichever flow triggered the dialog now that the user has acknowledged it.
-        if (_uiState.value.searchMode == PersonAlbumContract.SearchMode.TEXT) {
-            onRunTextSearch()
-        } else {
-            onStartDetection()
+        when (_uiState.value.searchMode) {
+            PersonAlbumContract.SearchMode.TEXT -> onRunTextSearch()
+            PersonAlbumContract.SearchMode.DESCRIPTION -> onRunDescriptionSearch()
+            PersonAlbumContract.SearchMode.FACES -> onStartDetection()
         }
     }
 
@@ -335,6 +341,81 @@ class PersonAlbumViewModel @Inject constructor(
             _uiState.update { it.copy(matches = matchUiModels) }
         } catch (e: Exception) {
             _uiState.update { it.copy(userMessage = e.message ?: "Text search failed. Please try again.") }
+        } finally {
+            _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Description search flow (CLIP semantic)
+    // ---------------------------------------------------------------------------
+
+    private fun onRunDescriptionSearch() {
+        val query = _uiState.value.descriptionQuery.trim()
+        if (query.isEmpty()) {
+            _uiState.update { it.copy(userMessage = "Enter a description to search for.") }
+            return
+        }
+        if (_uiState.value.isPreparingGallery || _uiState.value.isDetecting) return
+
+        viewModelScope.launch {
+            // Same first-run gate as the text flow: nothing indexed yet + onboarding unseen.
+            val indexedCount = descriptionIndexRepository.observeCount().first()
+            if (indexedCount == 0 && !onboardingPrefs.hasSeenOnboarding()) {
+                _uiState.update { it.copy(showIndexingOnboardingDialog = true) }
+                return@launch
+            }
+            runDescriptionDetection(query)
+        }
+    }
+
+    private suspend fun runDescriptionDetection(query: String) {
+        try {
+            // Reuse the face-indexing worker (it now also populates the CLIP embedding index) so
+            // the search runs against an up-to-date gallery. Same gate as runDetection().
+            val indexedCount = descriptionIndexRepository.observeCount().first()
+            val activeWork = workManager
+                .getWorkInfosForUniqueWorkFlow(IndexFacesWorker.WORK_NAME)
+                .first()
+            val isIndexing = activeWork.any {
+                it.state == WorkInfo.State.RUNNING || it.state == WorkInfo.State.ENQUEUED
+            }
+
+            if (indexedCount == 0 || isIndexing) {
+                _uiState.update {
+                    it.copy(isPreparingGallery = true, preparingProgressCurrent = 0, preparingProgressTotal = 0)
+                }
+
+                val succeeded = awaitIndexing()
+
+                _uiState.update { it.copy(isPreparingGallery = false) }
+                if (!succeeded) {
+                    _uiState.update { it.copy(userMessage = "Photo indexing failed. Please try again.") }
+                    return
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDetecting = true,
+                    matches = emptyList(),
+                    matchSelectionMode = false,
+                    selectedMatchUris = emptySet(),
+                    // Description searches aren't face-based; groups saved from them store 0 faces.
+                    lastSearchedFaceCount = 0,
+                )
+            }
+
+            val results = searchByDescriptionUseCase(query)
+            if (results.isEmpty()) {
+                _uiState.update { it.copy(userMessage = "No photos match that description.") }
+            }
+            val matchUiModels = results.map { match ->
+                MatchUiModel(uri = match.uri, showScore = false)
+            }
+            _uiState.update { it.copy(matches = matchUiModels) }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(userMessage = e.message ?: "Description search failed. Please try again.") }
         } finally {
             _uiState.update { it.copy(isPreparingGallery = false, isDetecting = false) }
         }

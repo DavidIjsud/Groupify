@@ -105,8 +105,11 @@
     <string name="photomatch_tap_to_change_photo">Tap to change photo</string>
     <string name="photomatch_tap_to_upload_photo">Tap to upload a photo</string>
     <string name="search_btn_search_photos">Search Photos</string>
+    <string name="search_by_description_hint">Describe a photo, e.g. \"dog on a beach\"…</string>
+    <string name="search_by_description_title">Search by description</string>
     <string name="search_by_text_hint">Search images that contain…</string>
     <string name="search_by_text_title">Search by text</string>
+    <string name="search_mode_description">Describe</string>
     <string name="search_mode_faces">Faces</string>
     <string name="search_mode_text">Text</string>
 </resources>

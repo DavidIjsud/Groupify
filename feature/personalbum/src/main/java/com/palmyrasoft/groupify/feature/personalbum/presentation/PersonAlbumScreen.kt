@@ -37,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -186,6 +187,17 @@ fun PersonAlbumScreen(
         }
     }
 
+    // Description search also needs gallery access to index/scan photos — request up-front, same
+    // as the text flow, instead of running against an empty gallery.
+    fun runDescriptionSearch() {
+        if (hasPermission) {
+            viewModel.onEvent(PersonAlbumContract.UiEvent.RunDescriptionSearch)
+        } else {
+            pendingAction = { viewModel.onEvent(PersonAlbumContract.UiEvent.RunDescriptionSearch) }
+            permissionLauncher.launch(permission)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
@@ -226,7 +238,7 @@ fun PersonAlbumScreen(
             if (uiState.queryFaces.isNotEmpty()) targetIndex++ // FaceSelectionSection
             targetIndex++ // Camera button
         } else {
-            targetIndex++ // SearchByTextCard
+            targetIndex++ // SearchByTextCard / SearchByDescriptionCard (single input card)
         }
         if (uiState.userMessage != null) targetIndex++ // error row
         if (uiState.isPreparingGallery) targetIndex++ // progress indicator
@@ -277,7 +289,17 @@ fun PersonAlbumScreen(
                 )
             }
 
-            if (uiState.searchMode == PersonAlbumContract.SearchMode.FACES) {
+            if (uiState.searchMode == PersonAlbumContract.SearchMode.DESCRIPTION) {
+                // Search-by-description card (CLIP semantic search)
+                item {
+                    SearchByDescriptionCard(
+                        query = uiState.descriptionQuery,
+                        enabled = !busy,
+                        onQueryChange = { viewModel.onEvent(PersonAlbumContract.UiEvent.UpdateDescriptionQuery(it)) },
+                        onSearch = { runDescriptionSearch() },
+                    )
+                }
+            } else if (uiState.searchMode == PersonAlbumContract.SearchMode.FACES) {
                 // Query photo preview card with face bounding-box overlay
                 item {
                     QueryPhotoCard(
@@ -457,10 +479,12 @@ fun PersonAlbumScreen(
                         )
                     }
                 } else {
-                    val searchEnabled = uiState.textQuery.isNotBlank() && !busy
+                    val isDescription = uiState.searchMode == PersonAlbumContract.SearchMode.DESCRIPTION
+                    val currentQuery = if (isDescription) uiState.descriptionQuery else uiState.textQuery
+                    val searchEnabled = currentQuery.isNotBlank() && !busy
 
                     Button(
-                        onClick = { runTextSearch() },
+                        onClick = { if (isDescription) runDescriptionSearch() else runTextSearch() },
                         enabled = searchEnabled,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -781,6 +805,14 @@ private fun SearchModeToggle(
             onClick = { onSelect(PersonAlbumContract.SearchMode.TEXT) },
             modifier = Modifier.weight(1f),
         )
+        SearchModeSegment(
+            icon = Icons.Filled.AutoAwesome,
+            label = stringResource(R.string.search_mode_description),
+            active = selected == PersonAlbumContract.SearchMode.DESCRIPTION,
+            enabled = enabled,
+            onClick = { onSelect(PersonAlbumContract.SearchMode.DESCRIPTION) },
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -799,17 +831,18 @@ private fun SearchModeSegment(
             .clip(RoundedCornerShape(10.dp))
             .background(if (active) AccentPurple else Color.Transparent)
             .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 10.dp),
+            .padding(vertical = 10.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = label,
             color = contentColor,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
         )
     }
 }
@@ -856,6 +889,67 @@ private fun SearchByTextCard(
             placeholder = {
                 Text(
                     text = stringResource(R.string.search_by_text_hint),
+                    color = TextSecondary,
+                )
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                cursorColor = AccentPurple,
+                focusedBorderColor = AccentPurple,
+                unfocusedBorderColor = Color(0xFF3D3D3D),
+                focusedContainerColor = DarkBackground,
+                unfocusedContainerColor = DarkBackground,
+                disabledContainerColor = DarkBackground,
+            ),
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Search-by-description card — title + input field (Describe tab, CLIP semantic)
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun SearchByDescriptionCard(
+    query: String,
+    enabled: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardBackground)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.search_by_description_title),
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            enabled = enabled,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.AutoAwesome,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                )
+            },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.search_by_description_hint),
                     color = TextSecondary,
                 )
             },

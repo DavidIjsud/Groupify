@@ -48,6 +48,8 @@ dependencies {
     implementation(libs.mlkit.face.detection)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.tflite.interpreter)
+    // CLIP semantic "search by description" — ONNX Runtime Mobile (vision + text encoders)
+    implementation(libs.onnxruntime.android)
     implementation(libs.androidx.exifinterface)
     implementation(libs.coil.compose)
     implementation(libs.androidx.material.icons.extended)

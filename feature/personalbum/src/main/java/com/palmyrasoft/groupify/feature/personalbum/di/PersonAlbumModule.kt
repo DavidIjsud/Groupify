@@ -3,7 +3,10 @@ package com.palmyrasoft.groupify.feature.personalbum.di
 
 import com.palmyrasoft.groupify.feature.personalbum.data.ml.MlKitFaceDetector
 import com.palmyrasoft.groupify.feature.personalbum.data.ml.MlKitTextRecognizer
+import com.palmyrasoft.groupify.feature.personalbum.data.ml.OnnxClipImageEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.data.ml.OnnxClipTextEmbedder
 import com.palmyrasoft.groupify.feature.personalbum.data.ml.TFLiteFaceNetEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.data.repository.DescriptionIndexRepositoryImpl
 import com.palmyrasoft.groupify.feature.personalbum.data.repository.FaceIndexRepositoryImpl
 import com.palmyrasoft.groupify.feature.personalbum.data.repository.GroupRepositoryImpl
 import com.palmyrasoft.groupify.feature.personalbum.data.repository.PersonRepositoryImpl
@@ -12,7 +15,10 @@ import com.palmyrasoft.groupify.feature.personalbum.data.repository.PhotoTextRep
 import com.palmyrasoft.groupify.feature.personalbum.data.thumbnail.AndroidQueryFaceThumbnailGenerator
 import com.palmyrasoft.groupify.feature.personalbum.domain.detection.FaceDetector
 import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.FaceEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.ImageEmbedder
+import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.TextQueryEmbedder
 import com.palmyrasoft.groupify.feature.personalbum.domain.recognition.TextRecognizer
+import com.palmyrasoft.groupify.feature.personalbum.domain.repository.DescriptionIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.FaceIndexRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.GroupRepository
 import com.palmyrasoft.groupify.feature.personalbum.domain.repository.PersonRepository
@@ -60,6 +66,20 @@ abstract class PersonAlbumModule {
     @Binds
     @Singleton
     abstract fun bindPhotoTextRepository(impl: PhotoTextRepositoryImpl): PhotoTextRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImageEmbedder(impl: OnnxClipImageEmbedder): ImageEmbedder
+
+    @Binds
+    @Singleton
+    abstract fun bindTextQueryEmbedder(impl: OnnxClipTextEmbedder): TextQueryEmbedder
+
+    @Binds
+    @Singleton
+    abstract fun bindDescriptionIndexRepository(
+        impl: DescriptionIndexRepositoryImpl,
+    ): DescriptionIndexRepository
 
     @Binds
     @Singleton

@@ -6,13 +6,14 @@ import com.palmyrasoft.groupify.feature.personalbum.presentation.model.QueryFace
 
 object PersonAlbumContract {
 
-    /** The two search modes shown by the Faces / Text segmented toggle. */
-    enum class SearchMode { FACES, TEXT }
+    /** The search modes shown by the Faces / Text / Describe segmented toggle. */
+    enum class SearchMode { FACES, TEXT, DESCRIPTION }
 
     data class UiState(
-        // Search mode toggle (Faces vs Text)
+        // Search mode toggle (Faces / Text / Describe)
         val searchMode: SearchMode = SearchMode.FACES,
         val textQuery: String = "",
+        val descriptionQuery: String = "",
         val selectedQueryPhotoUri: String? = null,
         val isPreparingGallery: Boolean = false,
         val preparingProgressCurrent: Int = 0,
@@ -48,6 +49,8 @@ object PersonAlbumContract {
         data class SwitchMode(val mode: SearchMode) : UiEvent
         data class UpdateTextQuery(val query: String) : UiEvent
         data object RunTextSearch : UiEvent
+        data class UpdateDescriptionQuery(val query: String) : UiEvent
+        data object RunDescriptionSearch : UiEvent
         data class PickQueryPhoto(val uri: String) : UiEvent
         data object StartDetection : UiEvent
         data object ShareMatches : UiEvent
